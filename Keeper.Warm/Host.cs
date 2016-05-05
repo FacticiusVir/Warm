@@ -140,7 +140,7 @@ namespace Keeper.Warm
 
         public QueryResult Query(IEnumerable<CompoundTerm> goals)
         {
-            var variables = GetVariables(goals).Distinct().Reverse().ToArray();
+            var variables = GetVariables(goals).Distinct().ToArray();
 
             var queryRule = new Rule(new CompoundTerm("_query", variables), goals.ToArray());
 

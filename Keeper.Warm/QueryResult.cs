@@ -49,7 +49,7 @@ namespace Keeper.Warm
             }
             else
             {
-                return this.BuildTermFromHeap(index);
+                return this.BuildTermFromHeap(variables.Length - (index + 1));
             }
         }
 
