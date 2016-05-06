@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.TestHarness", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Test", "Keeper.Warm.Test\Keeper.Warm.Test.csproj", "{8DA8E98A-5167-457A-B4FE-5E15E1363AAF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Core", "Keeper.Warm.Core\Keeper.Warm.Core.csproj", "{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{8DA8E98A-5167-457A-B4FE-5E15E1363AAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8DA8E98A-5167-457A-B4FE-5E15E1363AAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8DA8E98A-5167-457A-B4FE-5E15E1363AAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

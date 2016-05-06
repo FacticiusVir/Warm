@@ -50,13 +50,13 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="MachineTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Keeper.Warm\Keeper.Warm.csproj">
-      <Project>{229c0a04-1dc0-4125-9c9c-6c48c3eec250}</Project>
-      <Name>Keeper.Warm</Name>
+    <ProjectReference Include="..\Keeper.Warm.Core\Keeper.Warm.Core.csproj">
+      <Project>{cf73af0b-de7e-4deb-a48b-13368dbf4f4f}</Project>
+      <Name>Keeper.Warm.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>
