@@ -19,7 +19,7 @@ namespace Keeper.Warm.Prolog
 
         private static Parser<CompoundTermInfo> CompoundTermParserRef = Parse.Ref(() => CompoundTermParser);
 
-        private static Parser<ITermInfo> TermParser = ((Parser<ITermInfo>)AtomParser).Or(VariableParser).Or(CompoundTermParserRef);
+        private static Parser<ITermInfo> TermParser = ((Parser<ITermInfo>)CompoundTermParserRef).Or(AtomParser).Or(VariableParser);
 
         private static Parser<CompoundTermInfo> CompoundTermParser = from header in AtomParser
                                                                      from open in Parse.Char('(')
