@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Keeper.MakeSomething
+namespace Keeper.Warm
 {
     public sealed class Rule
     {
@@ -29,6 +29,17 @@ namespace Keeper.MakeSomething
             set;
         }
 
+        public override string ToString()
+        {
+            if (this.Goals.Any())
+            {
+                return string.Format("{0} :- {1}", this.Head, string.Join(", ", this.Goals.Select(x => x.ToString())));
+            }
+            else
+            {
+                return this.Head.ToString();
+            }
+        }
     }
 
     public sealed class CompoundTerm
@@ -40,8 +51,13 @@ namespace Keeper.MakeSomething
         }
 
         public CompoundTerm(string header, IEnumerable<ITerm> terms)
+            : this(new Atom(header), terms)
         {
-            this.Header = new Atom(header);
+        }
+
+        public CompoundTerm(Atom header, IEnumerable<ITerm> terms)
+        {
+            this.Header = header;
             this.Terms = terms == null
                 ? Enumerable.Empty<ITerm>()
                 : terms.ToArray();

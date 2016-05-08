@@ -178,7 +178,7 @@ namespace Keeper.Warm
                 case Opcode.Fail:
                     if (this.IsBacktrackAvailable)
                     {
-                        System.Diagnostics.Debug.WriteLine("Backtrack");
+                        System.Diagnostics.Debug.WriteLine("Backtrack on Fail");
                         this.Backtrack();
                         break;
                     }

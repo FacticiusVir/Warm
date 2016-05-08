@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Test", "Keeper.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Core", "Keeper.Warm.Core\Keeper.Warm.Core.csproj", "{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Prolog", "Keeper.Warm.Prolog\Keeper.Warm.Prolog.csproj", "{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF73AF0B-DE7E-4DEB-A48B-13368DBF4F4F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
