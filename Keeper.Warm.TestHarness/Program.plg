@@ -1,0 +1,8 @@
+﻿emptyList(empty).
+
+prepend(Item, Tail, list(Item, Tail)).
+
+contains(list(Head, Tail), Head).
+
+contains(list(Head, Tail), Item):-
+	contains(Tail, Item).
