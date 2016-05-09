@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm", "Keeper.Warm\Keeper.Warm.csproj", "{229C0A04-1DC0-4125-9C9C-6C48C3EEC250}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.TestHarness", "Keeper.Warm.TestHarness\Keeper.Warm.TestHarness.csproj", "{E3F6FCFD-A2F7-44A7-89B0-5192C99766C6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{302C8C63-3AB4-49E1-B0CD-69BA93C81FFD} = {302C8C63-3AB4-49E1-B0CD-69BA93C81FFD}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Keeper.Warm.Test", "Keeper.Warm.Test\Keeper.Warm.Test.csproj", "{8DA8E98A-5167-457A-B4FE-5E15E1363AAF}"
 EndProject

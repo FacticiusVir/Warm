@@ -6,6 +6,7 @@
 		InstructionPointer,
         Environment,
 		ContinuationPointer,
-        StackPointer
+        StackPointer,
+        ChoicePointBase
 	}
 }

@@ -34,6 +34,8 @@ namespace Keeper.Warm
 
             Console.WriteLine(rule.Head + bodyString);
 
+            generator.Emit(Opcode.Trace, new FunctorDescriptor(rule.Head));
+
             var head = rule.Head;
 
             var structurePointerLocal = generator.DefineLocal();
@@ -293,8 +295,29 @@ namespace Keeper.Warm
                 setVariables.Add(variablePair.Key);
             }
 
+            Local levelLocal = null;
+
+            if (rule.Goals.Any(x => x.Header.Token == "_cut"))
+            {
+                Console.WriteLine("GetLevel");
+
+                levelLocal = generator.DefineLocal();
+                generator.Emit(Opcode.LoadGlobalRegisterB0);
+                generator.Emit(Opcode.StoreLocal, levelLocal);
+            }
+
             foreach (var goal in rule.Goals)
             {
+                if(goal.Header.Token == "_cut")
+                {
+                    Console.WriteLine("Cut");
+
+                    generator.Emit(Opcode.LoadLocal, levelLocal);
+                    generator.Emit(Opcode.Cut);
+
+                    continue;
+                }
+
                 var termStack = new Stack<ITerm>();
                 var newTerms = new List<ITerm>(goal.Terms);
 
@@ -447,6 +470,8 @@ namespace Keeper.Warm
                 }
 
                 Console.WriteLine("Call {0}", new FunctorDescriptor(goal));
+                generator.Emit(Opcode.GetLevel);
+                generator.Emit(Opcode.StoreGlobalRegisterB0);
                 generator.Emit(Opcode.Call, new FunctorDescriptor(goal));
             }
 

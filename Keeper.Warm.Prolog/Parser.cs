@@ -27,6 +27,9 @@ namespace Keeper.Warm.Prolog
                                                                            select new[] { first }.Concat(tail)).Text()
                                                              select new VariableInfo(name);
 
+        private static Parser<CompoundTermInfo> CutParser = from symbol in Parse.Char('!').Token()
+                                                            select new CompoundTermInfo(new AtomInfo("_cut"), Enumerable.Empty<ITermInfo>());
+
         private static Parser<CompoundTermInfo> CompoundTermParser = from header in AtomParser
                                                                      from open in Parse.Char('(')
                                                                      from terms in TermParserRef.DelimitedBy(Parse.Char(','))
@@ -39,13 +42,15 @@ namespace Keeper.Warm.Prolog
                                                  from end in Parse.Char('.')
                                                  select CreateRule(head);
 
+        private static Parser<IEnumerable<ITermInfo>> GoalParser = ((Parser<ITermInfo>)CompoundTermParser).Or(AtomParser).Or(CutParser).DelimitedBy(Parse.Char(','));
+
         private static Parser<Rule> PredicateParser = from head in CompoundTermParser.Token()
                                                       from bind in Parse.String(":-").Token()
-                                                      from goals in CompoundTermParser.DelimitedBy(Parse.Char(','))
+                                                      from goals in GoalParser
                                                       from end in Parse.Char('.')
                                                       select CreateRule(head, goals);
 
-        private static Rule CreateRule(CompoundTermInfo headInfo, IEnumerable<CompoundTermInfo> goals = null)
+        private static Rule CreateRule(CompoundTermInfo headInfo, IEnumerable<ITermInfo> goals = null)
         {
             var variableNamespace = new Dictionary<string, Variable>();
 
@@ -70,7 +75,7 @@ namespace Keeper.Warm.Prolog
             }
             else
             {
-                return new Rule(head, goals.Select(x => (CompoundTerm)x.CreateTerm(resolve)).ToArray());
+                return new Rule(head, CreateGoals(goals, resolve));
             }
         }
 
@@ -86,7 +91,7 @@ namespace Keeper.Warm.Prolog
 
         public static CompoundTerm[] ParseQuery(string input)
         {
-            var goalInfo = CompoundTermParser.DelimitedBy(Parse.Char(',')).Parse(input);
+            var goalInfo = GoalParser.Parse(input);
 
             var variableNamespace = new Dictionary<string, Variable>();
 
@@ -103,7 +108,26 @@ namespace Keeper.Warm.Prolog
                 return result;
             };
 
-            return goalInfo.Select(x => (CompoundTerm)x.CreateTerm(resolve)).ToArray();
+            return CreateGoals(goalInfo, resolve);
+        }
+
+        private static CompoundTerm[] CreateGoals(IEnumerable<ITermInfo> goals, Func<string, Variable> resolve)
+        {
+            return goals.Select(x =>
+            {
+                var term = x.CreateTerm(resolve);
+
+                var termAsAtom = term as Atom;
+
+                if (termAsAtom != null)
+                {
+                    return new CompoundTerm(termAsAtom, Enumerable.Empty<ITerm>());
+                }
+                else
+                {
+                    return (CompoundTerm)term;
+                }
+            }).ToArray();
         }
 
         private class AtomInfo

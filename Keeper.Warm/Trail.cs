@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Keeper.Warm
 {
     public class Trail
     {
         private Stack<List<TrailItem>> trails = new Stack<List<TrailItem>>();
-        
+
         public void AddItem(Address address, int value)
         {
             if (this.IsBacktrackAvailable)
@@ -18,6 +16,14 @@ namespace Keeper.Warm
                     Address = address,
                     Value = value
                 });
+            }
+        }
+
+        public int Level
+        {
+            get
+            {
+                return this.trails.Count;
             }
         }
 
@@ -37,6 +43,19 @@ namespace Keeper.Warm
         public IEnumerable<TrailItem> PopBacktrackItems()
         {
             return this.trails.Pop();
+        }
+
+        public void Cut()
+        {
+            var trailItems = this.PopBacktrackItems();
+
+            if (this.IsBacktrackAvailable)
+            {
+                foreach (var item in trailItems)
+                {
+                    this.AddItem(item.Address, item.Value);
+                }
+            }
         }
     }
 }

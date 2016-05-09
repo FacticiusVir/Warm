@@ -1,8 +1,6 @@
-﻿using Keeper.Warm;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Keeper.Warm
 {
@@ -13,6 +11,45 @@ namespace Keeper.Warm
         private Dictionary<RuleLabel, RuleData> ruleLookup = new Dictionary<RuleLabel, RuleData>();
         private Dictionary<FunctorDescriptor, int> functorLookup = new Dictionary<FunctorDescriptor, int>();
         private int topOfCodePointer = 128;
+
+        private const int thunkSize = 4;
+
+        public Host()
+        {
+            this.AddBuiltin("nonvar", 1, new Opcode[]
+            {
+                Opcode.Allocate,
+                (Opcode)0,
+                Opcode.LoadArgumentAddress0,
+                Opcode.Load,
+                Opcode.GetTag,
+                Opcode.LoadConstant,
+                (Opcode)Tag.Ref,
+                Opcode.BranchNotEqual,
+                (Opcode)3,
+                Opcode.Fail,
+                Opcode.Deallocate,
+                (Opcode)0,
+                Opcode.Proceed
+            });
+        }
+
+        private void AddBuiltin(string name, int arity, Opcode[] code)
+        {
+            var label = new RuleLabel
+            {
+                Name = name,
+                Arity = arity
+            };
+
+            int rulePointer = this.topOfCodePointer;
+
+            this.machine.SetCode(code, this.topOfCodePointer);
+
+            this.topOfCodePointer += code.Length;
+
+            this.AddRule(label, rulePointer);
+        }
 
         private int LookupRulePointer(string name, int arity)
         {
@@ -41,7 +78,7 @@ namespace Keeper.Warm
                     LastThunkPointer = this.topOfCodePointer
                 };
 
-                this.topOfCodePointer += 4;
+                this.topOfCodePointer += thunkSize;
 
                 this.ruleLookup[label] = result;
             }
@@ -57,13 +94,22 @@ namespace Keeper.Warm
                 Arity = rule.Head.Terms.Count()
             };
 
+            var compiledRule = CompileRule(rule);
+            
             int rulePointer = this.topOfCodePointer;
 
-            int compiledLength = CompileRule(rule);
+            machine.SetCode(compiledRule, this.topOfCodePointer);
 
-            this.topOfCodePointer += compiledLength;
+            this.topOfCodePointer += compiledRule.Length;
 
+            this.AddRule(label, rulePointer);
+        }
+
+        private void AddRule(RuleLabel label, int rulePointer)
+        {
             RuleData ruleData;
+
+            Console.WriteLine("Add rule {0} @ {1}", label, rulePointer);
 
             if (!this.ruleLookup.TryGetValue(label, out ruleData))
             {
@@ -82,9 +128,11 @@ namespace Keeper.Warm
                     LastThunkPointer = this.topOfCodePointer
                 };
 
-                this.topOfCodePointer += 4;
+                this.topOfCodePointer += thunkSize;
 
                 this.ruleLookup[label] = ruleData;
+
+                Console.WriteLine("Define new");
             }
             else if (ruleData.IsDefined)
             {
@@ -104,7 +152,9 @@ namespace Keeper.Warm
 
                 ruleData.LastThunkPointer = this.topOfCodePointer;
 
-                this.topOfCodePointer += 4;
+                this.topOfCodePointer += thunkSize;
+
+                Console.WriteLine("Chain");
             }
             else
             {
@@ -112,25 +162,26 @@ namespace Keeper.Warm
                 {
                     Opcode.Nop,
                     Opcode.Nop,
-                    Opcode.BranchAlways,
+                    Opcode.BranchAbsolute,
                     (Opcode)rulePointer
                 }, ruleData.FirstThunkPointer);
 
                 ruleData.IsDefined = true;
+
+                Console.WriteLine("Define");
             }
+
+            Console.WriteLine(ruleData);
+            Console.WriteLine();
         }
 
-        private int CompileRule(Rule rule)
+        private Opcode[] CompileRule(Rule rule)
         {
             var generator = new CodeGenerator(rule.Head.Terms.Count(), this.LookupRulePointer, this.LookupFunctor);
 
             this.compiler.CompileRule(rule, generator);
 
-            var compiledRule = generator.Generate().Cast<Opcode>().ToArray();
-
-            machine.SetCode(compiledRule, this.topOfCodePointer);
-
-            return compiledRule.Length;
+            return generator.Generate().Cast<Opcode>().ToArray();
         }
 
         public QueryResult Query(params CompoundTerm[] goals)
@@ -144,7 +195,9 @@ namespace Keeper.Warm
 
             var queryRule = new Rule(new CompoundTerm("_query", variables), goals.ToArray());
 
-            int queryCodeLength = this.CompileRule(queryRule);
+            var compiledRule = this.CompileRule(queryRule);
+
+            machine.SetCode(compiledRule, this.topOfCodePointer);
 
             bool success = this.machine.Start(this.topOfCodePointer, variables.Count());
 
@@ -213,6 +266,11 @@ namespace Keeper.Warm
                 return this.Name == other.Name
                     && this.Arity == other.Arity;
             }
+
+            public override string ToString()
+            {
+                return string.Format("{0}/{1}", this.Name, this.Arity);
+            }
         }
 
         private class RuleData
@@ -220,6 +278,11 @@ namespace Keeper.Warm
             public bool IsDefined;
             public int FirstThunkPointer;
             public int LastThunkPointer;
+
+            public override string ToString()
+            {
+                return string.Format("Defined: {0}, First: {1}, Last: {2}", this.IsDefined, this.FirstThunkPointer, this.LastThunkPointer);
+            }
         }
     }
 }

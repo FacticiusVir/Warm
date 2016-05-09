@@ -21,9 +21,13 @@
         Unify = NoOperand | 0 << 8 | 11,
         Nop = NoOperand | 0 << 8 | 12,
         ChoicePoint = Int32Operand | 0 << 8 | 13,
+        GetLevel = NoOperand | 0 << 8 | 14,
+        Cut = NoOperand | 0 << 8 | 15,
+        Trace = Int32Operand | 0 << 8 | 16,
 
         LoadGlobalRegisterBase = NoOperand | 1 << 8,
         LoadGlobalRegisterH = LoadGlobalRegisterBase | GlobalRegister.TopOfHeap,
+        LoadGlobalRegisterB0 = LoadGlobalRegisterBase | GlobalRegister.ChoicePointBase,
 
         ApplyTagBase = NoOperand | 2 << 8,
         ApplyTagRef = ApplyTagBase | Tag.Ref,
@@ -73,6 +77,7 @@
 
         StoreGlobalRegisterBase = NoOperand | 11 << 8,
         StoreGlobalRegisterH = StoreGlobalRegisterBase | GlobalRegister.TopOfHeap,
+        StoreGlobalRegisterB0 = StoreGlobalRegisterBase | GlobalRegister.ChoicePointBase,
 
         LoadLocalAddress = Int32Operand | 12 << 8,
     }

@@ -66,6 +66,18 @@ namespace Keeper.Warm
             }
         }
 
+        public int ChoicePointBase
+        {
+            get
+            {
+                return this.globalRegisters[(int)GlobalRegister.ChoicePointBase].Value;
+            }
+            set
+            {
+                this.globalRegisters[(int)GlobalRegister.ChoicePointBase] = new Address(AddressType.Blank, value);
+            }
+        }
+
         public Machine()
         {
             this.globalRegisters = new Address[Enum.GetValues(typeof(GlobalRegister)).Length];
@@ -89,6 +101,7 @@ namespace Keeper.Warm
             this.TopOfHeap = new Address(AddressType.Heap, variableArgumentCount);
             this.InstructionPointer = new Address(AddressType.Code, instructionPointer);
             this.ContinuationPointer = new Address(AddressType.Code, -1);
+            this.ChoicePointBase = 0;
 
             this.stack.Pointer = -1;
 
@@ -122,6 +135,11 @@ namespace Keeper.Warm
             while (result == StepResult.Continue);
 
             return result == StepResult.Success;
+        }
+
+        public IEnumerable<Opcode> CodeView(int top)
+        {
+            return this.code.Take(top).Select(x => (Opcode)x);
         }
 
         public IEnumerable<Cell> HeapView
@@ -208,6 +226,12 @@ namespace Keeper.Warm
                     break;
                 case Opcode.StoreGlobalRegisterH:
                     this.StoreGlobalRegisterValue(GlobalRegister.TopOfHeap);
+                    break;
+                case Opcode.LoadGlobalRegisterB0:
+                    this.LoadGlobalRegisterValue(GlobalRegister.ChoicePointBase);
+                    break;
+                case Opcode.StoreGlobalRegisterB0:
+                    this.StoreGlobalRegisterValue(GlobalRegister.ChoicePointBase);
                     break;
                 case Opcode.Duplicate:
                     this.Duplicate();
@@ -305,6 +329,15 @@ namespace Keeper.Warm
                 case Opcode.ChoicePoint:
                     this.ChoicePoint(this.code[instructionPointer + 1]);
                     break;
+                case Opcode.GetLevel:
+                    this.GetLevel();
+                    break;
+                case Opcode.Cut:
+                    this.Cut();
+                    break;
+                case Opcode.Trace:
+                    this.Trace(this.code[instructionPointer + 1]);
+                    break;
                 default:
                     throw new NotImplementedException("Unknown Opcode: " + opcode);
             }
@@ -312,6 +345,37 @@ namespace Keeper.Warm
             System.Diagnostics.Debug.WriteLine("");
 
             return StepResult.Continue;
+        }
+
+        private void Trace(int functorIndex)
+        {
+            var functor = this.GetFunctor(functorIndex);
+
+            var argumentStrings = new List<string>();
+
+            for (int argumentIndex = 0; argumentIndex < functor.Arity; argumentIndex++)
+            {
+                var address = this.Environment - argumentIndex;
+
+                argumentStrings.Add(new Cell(this.LoadFromStore(address)).ToString());
+            }
+
+            //Console.WriteLine("Trace: {0} ({1})", functor, string.Join(", ", argumentStrings));
+        }
+
+        private void Cut()
+        {
+            int level = this.stack.Pop();
+
+            while (this.trail.Level > level)
+            {
+                this.trail.PopBacktrackItems();
+            }
+        }
+
+        private void GetLevel()
+        {
+            this.stack.Push(this.trail.Level);
         }
 
         private void ChoicePoint(int nextChoicePointer)
