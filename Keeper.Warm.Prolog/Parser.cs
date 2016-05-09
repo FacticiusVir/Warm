@@ -7,6 +7,16 @@ namespace Keeper.Warm.Prolog
 {
     public static class Parser
     {
+        private static Parser<ITermInfo> TermParserRef = Parse.Ref(() => TermParser);
+
+        private static Parser<ListInfo> ListParser = from open in Parse.Char('[')
+                                                     from items in TermParserRef.DelimitedBy(Parse.Char(',')).Optional()
+                                                     from tail in (from bar in Parse.Char('|')
+                                                                   from tailTerm in TermParserRef
+                                                                   select tailTerm).Optional()
+                                                     from close in Parse.Char(']')
+                                                     select new ListInfo(items.GetOrElse(Enumerable.Empty<ITermInfo>()), tail.GetOrDefault());
+
         private static Parser<AtomInfo> AtomParser = from name in (from first in Parse.Lower
                                                                    from tail in Parse.LetterOrDigit.Many()
                                                                    select new[] { first }.Concat(tail)).Text().Token()
@@ -14,18 +24,16 @@ namespace Keeper.Warm.Prolog
 
         private static Parser<VariableInfo> VariableParser = from name in (from first in Parse.Upper
                                                                            from tail in Parse.LetterOrDigit.Many()
-                                                                           select new[] { first }.Concat(tail)).Text().Token()
+                                                                           select new[] { first }.Concat(tail)).Text()
                                                              select new VariableInfo(name);
-
-        private static Parser<CompoundTermInfo> CompoundTermParserRef = Parse.Ref(() => CompoundTermParser);
-
-        private static Parser<ITermInfo> TermParser = ((Parser<ITermInfo>)CompoundTermParserRef).Or(AtomParser).Or(VariableParser);
 
         private static Parser<CompoundTermInfo> CompoundTermParser = from header in AtomParser
                                                                      from open in Parse.Char('(')
-                                                                     from terms in TermParser.DelimitedBy(Parse.Char(','))
+                                                                     from terms in TermParserRef.DelimitedBy(Parse.Char(','))
                                                                      from close in Parse.Char(')')
                                                                      select new CompoundTermInfo(header, terms);
+
+        private static Parser<ITermInfo> TermParser = (((Parser<ITermInfo>)ListParser).Or(CompoundTermParser).Or(AtomParser).Or(VariableParser)).Token();
 
         private static Parser<Rule> FactParser = from head in CompoundTermParser.Token()
                                                  from end in Parse.Char('.')
@@ -145,6 +153,34 @@ namespace Keeper.Warm.Prolog
             public ITerm CreateTerm(Func<string, Variable> resolve)
             {
                 return new CompoundTerm((Atom)this.header, this.terms.Select(x => x.CreateTerm(resolve)));
+            }
+        }
+
+        private class ListInfo
+            : ITermInfo
+        {
+            private IEnumerable<ITermInfo> items;
+            private ITermInfo tail;
+
+            public ListInfo(IEnumerable<ITermInfo> items, ITermInfo tail)
+            {
+                this.items = items;
+                this.tail = tail;
+            }
+
+            public ITerm CreateTerm(Func<string, Variable> resolve)
+            {
+                var tailTerm =
+                    this.tail != null
+                    ? this.tail.CreateTerm(resolve)
+                    : new Atom("_emptyList");
+
+                foreach (var item in this.items.Reverse())
+                {
+                    tailTerm = new CompoundTerm("_list", item.CreateTerm(resolve), tailTerm);
+                }
+
+                return tailTerm;
             }
         }
 
