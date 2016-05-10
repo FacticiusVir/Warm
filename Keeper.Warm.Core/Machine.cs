@@ -43,31 +43,40 @@ namespace Keeper.Warm
             return codePointer;
         }
 
-        public Thread SpawnThread(int instructionPointer, int stackSize)
+        public Thread SpawnThread(int instructionPointer, int stackSize, int trailSize)
         {
             int stackPointer = this.MemAlloc(stackSize);
+            int trailPointer = this.MemAlloc(trailSize);
 
-            return new Thread(this, instructionPointer, stackPointer);
+            return new Thread(this, instructionPointer, stackPointer, trailPointer);
         }
 
         public class Thread
         {
-            private Machine parent;
-            private int instructionPointer;
-            private int stackPointer;
-            private int stackOffset;
+            private readonly Machine parent;
+            private readonly int stackPointer;
+            private readonly int trailPointer;
 
-            internal Thread(Machine parent, int instructionPointer, int stackPointer)
+            private int instructionPointer;
+            private int stackOffset;
+            private int trailBaseOffset;
+            private int trailOffset;
+
+            internal Thread(Machine parent, int instructionPointer, int stackPointer, int trailPointer)
             {
                 this.parent = parent;
                 this.instructionPointer = instructionPointer;
                 this.stackPointer = stackPointer;
                 this.stackOffset = 0;
+                this.trailPointer = trailPointer;
+                this.trailBaseOffset = 0;
+                this.trailOffset = 0;
             }
 
             public bool Step()
             {
                 var opcode = (Opcode)this.parent.memory[this.instructionPointer];
+                int argument = this.parent.memory[this.instructionPointer + 1];
 
                 this.instructionPointer += GetInstructionSize(opcode);
 
@@ -84,6 +93,9 @@ namespace Keeper.Warm
                     case Opcode.LoadConstant6:
                     case Opcode.LoadConstant7:
                         this.PushValue((int)opcode & 7);
+                        break;
+                    case Opcode.LoadConstant:
+                        this.PushValue(argument);
                         break;
                     case Opcode.Add:
                         this.Add();
@@ -112,10 +124,20 @@ namespace Keeper.Warm
 
             private void PushValue(int value)
             {
-                this.parent.memory[this.stackPointer + this.stackOffset] = value;
+                int pointer = this.stackPointer + this.stackOffset;
+                this.WriteToMemory(pointer, value);
                 this.stackOffset++;
             }
-            
+
+            private void WriteToMemory(int pointer, int value)
+            {
+                this.parent.memory[pointer] = value;
+                if(this.IsBackTrackAvailable)
+                {
+
+                }
+            }
+
             private static int GetInstructionSize(Opcode opcode)
             {
                 Opcode operandSizeFlag
@@ -126,7 +148,6 @@ namespace Keeper.Warm
                     case Opcode.NoOperand:
                         return 1;
                     case Opcode.Int32Operand:
-                    case Opcode.RulePointerOperand:
                         return 2;
                     default:
                         throw new NotSupportedException();
@@ -138,6 +159,14 @@ namespace Keeper.Warm
                 get
                 {
                     return this.parent.memory.Skip(this.stackPointer).Take(this.stackOffset);
+                }
+            }
+
+            public bool IsBackTrackAvailable
+            {
+                get
+                {
+                    return this.trailBaseOffset > 0;
                 }
             }
         }

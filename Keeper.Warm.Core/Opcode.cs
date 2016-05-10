@@ -4,14 +4,13 @@
     {
         NoOperand = 0x01 << 24,
         Int32Operand = 0x02 << 24,
-        RulePointerOperand = 0x03 << 24,
         OperandMask = 0xFF << 24,
 
         Halt = NoOperand | 0 << 8 | 0,
         Duplicate = NoOperand | 0 << 8 | 1,
         Allocate = Int32Operand | 0 << 8 | 2,
         Deallocate = Int32Operand | 0 << 8 | 3,
-        Call = RulePointerOperand | 0 << 8 | 4,
+        Call = Int32Operand | 0 << 8 | 4,
         Proceed = NoOperand | 0 << 8 | 5,
         Fail = NoOperand | 0 << 8 | 10,
         Nop = NoOperand | 0 << 8 | 12,

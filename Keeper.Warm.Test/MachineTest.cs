@@ -17,7 +17,7 @@ namespace Keeper.Warm.Test
         {
             var target = new Machine(1024);
 
-            var thread = target.SpawnThread(0, 128);
+            var thread = target.SpawnThread(0, 128, 128);
         }
 
         [TestMethod]
@@ -30,7 +30,7 @@ namespace Keeper.Warm.Test
                 Opcode.LoadConstant2
             });
 
-            var thread = target.SpawnThread(codePointer, 128);
+            var thread = target.SpawnThread(codePointer, 128, 128);
 
             Assert.IsTrue(thread.Step());
             Assert.AreEqual(thread.Stack.Count(), 1);
@@ -49,7 +49,7 @@ namespace Keeper.Warm.Test
                 Opcode.Add
             });
 
-            var thread = target.SpawnThread(codePointer, 128);
+            var thread = target.SpawnThread(codePointer, 128, 128);
 
             Assert.IsTrue(thread.Step());
             Assert.IsTrue(thread.Step());

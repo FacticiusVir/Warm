@@ -387,6 +387,7 @@ namespace Keeper.Warm
             this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.Environment), this.Environment.Value);
             this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.TopOfHeap), this.TopOfHeap.Value);
             this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.StackPointer), this.stack.Pointer);
+            this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.ChoicePointBase), this.ChoicePointBase);
         }
 
         public bool IsBacktrackAvailable
