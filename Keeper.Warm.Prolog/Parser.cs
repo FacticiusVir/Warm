@@ -91,7 +91,9 @@ namespace Keeper.Warm.Prolog
 
         public static CompoundTerm[] ParseQuery(string input)
         {
-            var goalInfo = GoalParser.Parse(input);
+            var goalInfo = (from goals in GoalParser
+                            from stop in Parse.Char('.').End()
+                            select goals).Parse(input);
 
             var variableNamespace = new Dictionary<string, Variable>();
 

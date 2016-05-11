@@ -60,27 +60,45 @@ namespace Keeper.Warm
         {
             var results = testHost.Query(query);
 
-            while (results.Success)
+            if (results.Success)
             {
-                foreach (var variable in results.Variables)
-                {
-                    var value = results.GetVariable(variable);
+                bool running = true;
 
-                    Console.WriteLine("{0}: {1}", variable, Format(value));
-                }
-
-                if (!results.Variables.Any())
+                while (running)
                 {
-                    Console.WriteLine("yes");
-                }
+                    foreach (var variable in results.Variables)
+                    {
+                        var value = results.GetVariable(variable);
 
-                if (results.Continue())
-                {
-                    Console.WriteLine("Continue");
+                        Console.WriteLine("{0}: {1}", variable, Format(value));
+                    }
+
+                    if (!results.Variables.Any())
+                    {
+                        Console.WriteLine("yes");
+                    }
+
+                    running = false;
+
+                    if (results.CanContinue)
+                    {
+                        Console.WriteLine("Continue");
+
+                        if (results.Continue())
+                        {
+                            running = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("no");
+                        }
+                    }
                 }
             }
-
-            Console.WriteLine("no");
+            else
+            {
+                Console.WriteLine("no");
+            }
 
             Console.WriteLine();
         }

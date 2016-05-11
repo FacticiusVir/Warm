@@ -7,6 +7,7 @@ namespace Keeper.Warm
     public class Machine
     {
         private List<FunctorDescriptor> functorList = new List<FunctorDescriptor>();
+        private List<Func<Machine, bool>> callbacks = new List<Func<Machine, bool>>();
 
         private Address[] globalRegisters;
 
@@ -16,6 +17,14 @@ namespace Keeper.Warm
 
         private int[] heap;
         private int[] code;
+
+        public Address StackPointer
+        {
+            get
+            {
+                return new Address(AddressType.Stack, this.stack.Pointer);
+            }
+        }
 
         public Address TopOfHeap
         {
@@ -80,16 +89,18 @@ namespace Keeper.Warm
 
         public Machine()
         {
+            int baseSize = 1 << 10;
+
             this.globalRegisters = new Address[Enum.GetValues(typeof(GlobalRegister)).Length];
             this.TopOfHeap = new Address(AddressType.Heap, 0);
             this.InstructionPointer = new Address(AddressType.Code, 0);
             this.Environment = new Address(AddressType.Blank, 0);
             this.ContinuationPointer = new Address(AddressType.Code, -1);
-            this.heap = new int[1024];
+            this.heap = new int[baseSize];
             this.trail = new Trail();
-            this.stack = new BranchingStack(this.trail, 1024);
+            this.stack = new BranchingStack(this.trail, baseSize);
             this.pdl = new Stack<Address>();
-            this.code = new int[1024 * 64];
+            this.code = new int[baseSize * 64];
 
             this.code[0] = (int)Opcode.Halt;
         }
@@ -326,6 +337,9 @@ namespace Keeper.Warm
                     break;
                 case Opcode.Nop:
                     break;
+                case Opcode.Pop:
+                    this.stack.Pop();
+                    break;
                 case Opcode.ChoicePoint:
                     this.ChoicePoint(this.code[instructionPointer + 1]);
                     break;
@@ -338,6 +352,15 @@ namespace Keeper.Warm
                 case Opcode.Trace:
                     this.Trace(this.code[instructionPointer + 1]);
                     break;
+                case Opcode.EndTrace:
+                    this.Trace(this.code[instructionPointer + 1], true);
+                    break;
+                case Opcode.Callback:
+                    if (!this.Callback(this.code[instructionPointer + 1]))
+                    {
+                        goto case Opcode.Fail;
+                    }
+                    break;
                 default:
                     throw new NotImplementedException("Unknown Opcode: " + opcode);
             }
@@ -347,7 +370,14 @@ namespace Keeper.Warm
             return StepResult.Continue;
         }
 
-        private void Trace(int functorIndex)
+        private bool Callback(int callbackIndex)
+        {
+            var callback = this.callbacks[callbackIndex];
+
+            return callback(this);
+        }
+
+        private void Trace(int functorIndex, bool end = false)
         {
             var functor = this.GetFunctor(functorIndex);
 
@@ -357,14 +387,20 @@ namespace Keeper.Warm
             {
                 var address = this.Environment - argumentIndex;
 
-                argumentStrings.Add(new Cell(this.LoadFromStore(address)).ToString());
+                argumentStrings.Add(new Cell(this.DereferenceAndLoad(address)).ToString());
             }
 
-            //Console.WriteLine("Trace: {0} ({1})", functor, string.Join(", ", argumentStrings));
+            string traceString = string.Format("{3}{2}: {0} ({1})", functor, string.Join(", ", argumentStrings), end ? "Exit" : "Enter", new string('\t', this.trail.Level));
+
+            System.Diagnostics.Debug.WriteLine(traceString);
+
+            //Console.WriteLine(traceString);
         }
 
         private void Cut()
         {
+            //Console.WriteLine("Cut");
+
             int level = this.stack.Pop();
 
             while (this.trail.Level > level)
@@ -401,6 +437,7 @@ namespace Keeper.Warm
         public bool Backtrack()
         {
             System.Diagnostics.Debug.WriteLine("Backtrack");
+            //Console.WriteLine("Backtrack");
 
             if (!this.IsBacktrackAvailable)
             {
@@ -583,10 +620,20 @@ namespace Keeper.Warm
             return this.InstructionPointer.Pointer >= 0;
         }
 
-        private void Call(int jumpPointer)
+        public void Call(int jumpPointer)
         {
             this.ContinuationPointer = this.InstructionPointer;
             this.InstructionPointer = new Address(AddressType.Code, jumpPointer);
+        }
+
+        public void Push(Cell value)
+        {
+            this.stack.Push(value.Value);
+        }
+
+        public void Pop()
+        {
+            this.stack.Pop();
         }
 
         private void LoadConstant(int constantValue)
@@ -623,6 +670,13 @@ namespace Keeper.Warm
         public void SetCode(Opcode[] code, int offset = 0)
         {
             Array.Copy(code, 0, this.code, offset, Math.Min(code.Length, this.code.Length));
+        }
+
+        public int AddCallback(Func<Machine, bool> callback)
+        {
+            this.callbacks.Add(callback);
+
+            return this.callbacks.Count - 1;
         }
 
         private void Duplicate()

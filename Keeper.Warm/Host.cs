@@ -16,22 +16,85 @@ namespace Keeper.Warm
 
         public Host()
         {
+            this.AddBuiltin("fail", 0, new Opcode[]
+                {
+                    Opcode.Fail
+                });
+
             this.AddBuiltin("nonvar", 1, new Opcode[]
+                {
+                    Opcode.Allocate,
+                    (Opcode)0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Load,
+                    Opcode.GetTag,
+                    Opcode.LoadConstant,
+                    (Opcode)Tag.Ref,
+                    Opcode.BranchNotEqual,
+                    (Opcode)3,
+                    Opcode.Fail,
+                    Opcode.Deallocate,
+                    (Opcode)0,
+                    Opcode.Proceed
+                });
+
+            int testCallbackIndex = this.machine.AddCallback(this.Call);
+
+            this.AddBuiltin("call", 1, new Opcode[]
+                {
+                    Opcode.Allocate,
+                    (Opcode)0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Load,
+                    //Opcode.GetLevel,
+                    //Opcode.StoreGlobalRegisterB0,
+                    Opcode.Callback,
+                    (Opcode)testCallbackIndex,
+                    Opcode.Pop,
+                    Opcode.Deallocate,
+                    (Opcode)0,
+                    Opcode.Proceed
+                });
+        }
+
+        private bool Call(Machine machine)
+        {
+            var goalCell = new Cell(machine.DereferenceAndLoad(machine.StackPointer));
+
+            if (goalCell.Tag != Tag.Str)
             {
-                Opcode.Allocate,
-                (Opcode)0,
-                Opcode.LoadArgumentAddress0,
-                Opcode.Load,
-                Opcode.GetTag,
-                Opcode.LoadConstant,
-                (Opcode)Tag.Ref,
-                Opcode.BranchNotEqual,
-                (Opcode)3,
-                Opcode.Fail,
-                Opcode.Deallocate,
-                (Opcode)0,
-                Opcode.Proceed
-            });
+                System.Diagnostics.Debug.WriteLine("Not a compound term");
+
+                return false;
+            }
+
+            var functorCell = new Cell(machine.LoadFromStore(goalCell.Address));
+
+            var functor = machine.GetFunctor(functorCell.Address.Pointer);
+
+            var ruleLabel = new RuleLabel()
+            {
+                Name = functor.Name,
+                Arity = functor.Arity
+            };
+
+            RuleData ruleData;
+
+            if (!this.ruleLookup.TryGetValue(ruleLabel, out ruleData))
+            {
+                System.Diagnostics.Debug.WriteLine("No recognised rule for " + functor);
+
+                return false;
+            }
+
+            for (int termIndex = 0; termIndex < functor.Arity; termIndex++)
+            {
+                machine.Push(new Cell(Tag.Ref, goalCell.Address + (functor.Arity - termIndex)));
+            }
+
+            machine.Call(ruleData.FirstThunkPointer);
+
+            return true;
         }
 
         private void AddBuiltin(string name, int arity, Opcode[] code)
@@ -95,7 +158,7 @@ namespace Keeper.Warm
             };
 
             var compiledRule = CompileRule(rule);
-            
+
             int rulePointer = this.topOfCodePointer;
 
             machine.SetCode(compiledRule, this.topOfCodePointer);

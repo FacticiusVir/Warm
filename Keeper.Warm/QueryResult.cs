@@ -22,6 +22,14 @@ namespace Keeper.Warm
             private set;
         }
 
+        public bool CanContinue
+        {
+            get
+            {
+                return this.machine.IsBacktrackAvailable;
+            }
+        }
+
         public bool Continue()
         {
             bool result = this.machine.Continue();
@@ -49,23 +57,26 @@ namespace Keeper.Warm
             }
             else
             {
-                return this.BuildTermFromHeap(variables.Length - (index + 1));
+                return BuildTermFromHeap(this.machine, variables.Length - (index + 1));
             }
         }
 
-        private ITerm BuildTermFromHeap(int index)
+        public static ITerm BuildTermFromHeap(Machine machine, int index)
         {
-            Address termAddress = new Address(AddressType.Heap, index);
+            return BuildTermFromAddress(machine, new Address(AddressType.Heap, index));
+        }
 
-            Cell value = new Cell(this.machine.DereferenceAndLoad(termAddress));
+        public static ITerm BuildTermFromAddress(Machine machine, Address termAddress)
+        {
+            Cell value = new Cell(machine.DereferenceAndLoad(termAddress));
 
             switch (value.Tag)
             {
                 case Tag.Ref:
                     return new Variable(value.Address.Pointer.ToString());
                 case Tag.Str:
-                    Cell functorCell = new Cell(this.machine.DereferenceAndLoad(value.Address));
-                    FunctorDescriptor functor = this.machine.GetFunctor(functorCell.Address.Pointer);
+                    Cell functorCell = new Cell(machine.DereferenceAndLoad(value.Address));
+                    FunctorDescriptor functor = machine.GetFunctor(functorCell.Address.Pointer);
 
                     ITerm[] terms = null;
 
@@ -75,13 +86,13 @@ namespace Keeper.Warm
 
                         for (int termIndex = 0; termIndex < functor.Arity; termIndex++)
                         {
-                            terms[termIndex] = this.BuildTermFromHeap((value.Address + termIndex + 1).Pointer);
+                            terms[termIndex] = BuildTermFromHeap(machine, (value.Address + termIndex + 1).Pointer);
                         }
                     }
 
                     return new CompoundTerm(functor.Name, terms);
                 case Tag.Con:
-                    FunctorDescriptor constantFunctor = this.machine.GetFunctor(value.Address.Pointer);
+                    FunctorDescriptor constantFunctor = machine.GetFunctor(value.Address.Pointer);
 
                     if (constantFunctor.Name == "[]")
                     {
@@ -92,8 +103,8 @@ namespace Keeper.Warm
                         return new Atom(constantFunctor.Name);
                     }
                 case Tag.Lis:
-                    var headTerm = this.BuildTermFromHeap(value.Address.Pointer);
-                    var TailTerm = this.BuildTermFromHeap((value.Address + 1).Pointer);
+                    var headTerm = BuildTermFromHeap(machine, value.Address.Pointer);
+                    var TailTerm = BuildTermFromHeap(machine, (value.Address + 1).Pointer);
 
                     return new ListPair(headTerm, (IListTail)TailTerm);
                 default:

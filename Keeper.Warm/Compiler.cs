@@ -474,6 +474,8 @@ namespace Keeper.Warm
                 generator.Emit(Opcode.StoreGlobalRegisterB0);
                 generator.Emit(Opcode.Call, new FunctorDescriptor(goal));
             }
+            
+            generator.Emit(Opcode.EndTrace, new FunctorDescriptor(rule.Head));
 
             Console.WriteLine();
         }

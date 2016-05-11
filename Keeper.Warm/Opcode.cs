@@ -24,6 +24,9 @@
         GetLevel = NoOperand | 0 << 8 | 14,
         Cut = NoOperand | 0 << 8 | 15,
         Trace = Int32Operand | 0 << 8 | 16,
+        Callback = Int32Operand | 0 << 8 | 17,
+        Pop = NoOperand | 0 << 8 | 18,
+        EndTrace = Int32Operand | 0 << 8 | 19,
 
         LoadGlobalRegisterBase = NoOperand | 1 << 8,
         LoadGlobalRegisterH = LoadGlobalRegisterBase | GlobalRegister.TopOfHeap,
