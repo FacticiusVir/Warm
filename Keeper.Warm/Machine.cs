@@ -113,6 +113,8 @@ namespace Keeper.Warm
             this.InstructionPointer = new Address(AddressType.Code, instructionPointer);
             this.ContinuationPointer = new Address(AddressType.Code, -1);
             this.ChoicePointBase = 0;
+            this.Environment = new Address(AddressType.Blank, 0);
+            this.trail.Clear();
 
             this.stack.Pointer = -1;
 
@@ -390,22 +392,22 @@ namespace Keeper.Warm
                 argumentStrings.Add(new Cell(this.DereferenceAndLoad(address)).ToString());
             }
 
-            string traceString = string.Format("{3}{2}: {0} ({1})", functor, string.Join(", ", argumentStrings), end ? "Exit" : "Enter", new string('\t', this.trail.Level));
+            string traceString = string.Format("{2}: {0} ({1})", functor, string.Join(", ", argumentStrings), end ? "Exit" : "Enter");
 
             System.Diagnostics.Debug.WriteLine(traceString);
 
-            //Console.WriteLine(traceString);
+            //Console.WriteLine("--" + new string('\t', this.trail.Level) + traceString);
         }
 
         private void Cut()
         {
-            //Console.WriteLine("Cut");
+            //Console.WriteLine("--Cut");
 
             int level = this.stack.Pop();
 
             while (this.trail.Level > level)
             {
-                this.trail.PopBacktrackItems();
+                this.trail.Cut();
             }
         }
 
@@ -417,6 +419,8 @@ namespace Keeper.Warm
         private void ChoicePoint(int nextChoicePointer)
         {
             this.trail.Push();
+
+            System.Diagnostics.Debug.WriteLine("Level: " + this.trail.Level);
 
             this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.InstructionPointer), nextChoicePointer);
             this.trail.AddItem(new Address(AddressType.GlobalRegister, (int)GlobalRegister.ContinuationPointer), this.ContinuationPointer.Value);
@@ -437,7 +441,7 @@ namespace Keeper.Warm
         public bool Backtrack()
         {
             System.Diagnostics.Debug.WriteLine("Backtrack");
-            //Console.WriteLine("Backtrack");
+            //Console.WriteLine("--Backtrack");
 
             if (!this.IsBacktrackAvailable)
             {

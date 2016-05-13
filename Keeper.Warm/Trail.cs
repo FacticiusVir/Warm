@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Keeper.Warm
@@ -56,6 +57,11 @@ namespace Keeper.Warm
                     this.AddItem(item.Address, item.Value);
                 }
             }
+        }
+
+        public void Clear()
+        {
+            this.trails.Clear();
         }
     }
 }

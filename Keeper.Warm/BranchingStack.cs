@@ -68,6 +68,8 @@ namespace Keeper.Warm
 
             System.Diagnostics.Debug.WriteLine("Push: {2} {0}/{1}", value, new Cell(value), this.stackPointer);
 
+            this.trail.AddItem(new Address(AddressType.Stack, this.stackPointer), this.stack[this.stackPointer]);
+
             this[this.stackPointer] = value;
         }
 
