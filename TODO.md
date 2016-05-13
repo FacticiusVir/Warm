@@ -6,3 +6,4 @@
 - [ ] Optimise stack trail
 - [ ] Numeric constants & builtins
   - [ ] Random/3
+- [ ] Void variables

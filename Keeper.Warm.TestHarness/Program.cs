@@ -13,13 +13,9 @@ namespace Keeper.Warm
             try
             {
                 var testHost = new Host();
-
-                var rules = Parser.ParseFile(File.ReadAllText(".\\Program.plg"));
-
-                foreach (var rule in rules)
-                {
-                    testHost.AddRule(rule);
-                }
+                
+                LoadRules(testHost, ".\\Builtin.plg");
+                LoadRules(testHost, ".\\Program.plg");
 
                 bool isRunning = true;
 
@@ -38,6 +34,8 @@ namespace Keeper.Warm
                         {
                             var query = Parser.ParseQuery(line);
 
+                            Console.WriteLine();
+
                             RunQuery(testHost, query);
                         }
                         catch (Exception ex)
@@ -53,6 +51,16 @@ namespace Keeper.Warm
                 Console.WriteLine("Exception thrown: {0}", ex.Message);
 
                 Console.ReadLine();
+            }
+        }
+
+        private static void LoadRules(Host testHost, string fileName)
+        {
+            var rules = Parser.ParseFile(File.ReadAllText(fileName));
+
+            foreach (var rule in rules)
+            {
+                testHost.AddRule(rule);
             }
         }
 
@@ -78,6 +86,8 @@ namespace Keeper.Warm
                         Console.WriteLine("yes");
                     }
 
+                    Console.WriteLine();
+
                     running = false;
 
                     if (results.CanContinue)
@@ -90,17 +100,21 @@ namespace Keeper.Warm
                         }
                         else
                         {
+
+                            Console.WriteLine();
                             Console.WriteLine("no");
                         }
+
+                        Console.WriteLine();
                     }
                 }
             }
             else
             {
                 Console.WriteLine("no");
-            }
 
-            Console.WriteLine();
+                Console.WriteLine();
+            }
         }
 
         private static string Format(ITerm value)

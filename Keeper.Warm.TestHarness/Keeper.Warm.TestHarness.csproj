@@ -49,6 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Builtin.plg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Program.plg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

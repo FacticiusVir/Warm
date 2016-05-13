@@ -1,22 +1,60 @@
-﻿contains(X, [Y|Tail]) :-
-	nonvar(X), unify(X, Y), !.
-contains(X, [X|Tail]).
-contains(X, [Head|Tail]) :-
-	contains(X, Tail).
+﻿parent(cronus,hestia).
+parent(cronus,pluto).
+parent(cronus,poseidon).
+parent(cronus,zeus).
+parent(cronus,hera).
+parent(cronus,demeter).
+parent(rhea, hestia).
+parent(rhea, pluto).
+parent(rhea, poseidon).
+parent(rhea, zeus).
+parent(rhea, hera).
+parent(rhea, demeter).
 
-unify(X, X).
+parent(zeus, athena).
 
-append([], List, List).
-append([Head|Tail], List, [Head|Rest]) :-
-    append(Tail, List, Rest).
+parent(zeus, ares).
+parent(zeus, hebe).
+parent(zeus, hephaestus).
+parent(hera, ares).
+parent(hera, hebe).
+parent(hera, hephaestus).
 
-not(X) :-
-	call(X), !, fail.
-not(X).
+parent(zeus, persephone).
+parent(demeter, persephone).
 
-test(a).
-test(b).
-test(c).
-test(d).
-test(e).
-test(f).
+male(cronus).
+male(pluto).
+male(poseidon).
+male(zeus).
+male(ares).
+male(hephaestus).
+female(rhea).
+female(hestia).
+female(hera).
+female(demeter).
+female(athena).
+female(hebe).
+female(persephone).
+
+isFather(X, Y):-
+	male(X),
+	parent(X, Y).
+
+isMother(X, Y):-
+	female(X),
+	parent(X, Y).
+
+isDaughter(X, Y):-
+	female(X),
+	parent(Y, X).
+
+isSon(X, Y):-
+	male(X),
+	parent(Y, X).
+
+isAncestor(X, Y):-
+	parent(X, Y).
+isAncestor(X, Y):-
+	parent(X, T),
+	parent(T, Y).
