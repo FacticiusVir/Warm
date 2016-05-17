@@ -22,6 +22,11 @@ namespace Keeper.Warm.Prolog
                                                                    select new[] { first }.Concat(tail)).Text().Token()
                                                      select new AtomInfo(name);
 
+        private static Parser<AtomInfo> NumberParser = from name in (from first in Parse.Digit
+                                                                     from tail in Parse.LetterOrDigit.Many()
+                                                                     select new[] { first }.Concat(tail)).Text().Token()
+                                                       select new AtomInfo("#" + name);
+
         private static Parser<VariableInfo> VariableParser = from name in (from first in Parse.Upper
                                                                            from tail in Parse.LetterOrDigit.Many()
                                                                            select new[] { first }.Concat(tail)).Text()
@@ -36,7 +41,7 @@ namespace Keeper.Warm.Prolog
                                                                      from close in Parse.Char(')')
                                                                      select new CompoundTermInfo(header, terms);
 
-        private static Parser<ITermInfo> TermParser = (((Parser<ITermInfo>)ListParser).Or(CompoundTermParser).Or(AtomParser).Or(VariableParser)).Token();
+        private static Parser<ITermInfo> TermParser = (((Parser<ITermInfo>)ListParser).Or(CompoundTermParser).Or(AtomParser).Or(VariableParser).Or(NumberParser)).Token();
 
         private static Parser<Rule> FactParser = from head in CompoundTermParser.Token()
                                                  from end in Parse.Char('.')

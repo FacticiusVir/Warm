@@ -116,7 +116,7 @@ namespace Keeper.Warm
                 Console.WriteLine();
             }
         }
-
+        
         private static string Format(ITerm value)
         {
             var valueAsAtom = value as Atom;
@@ -124,6 +124,10 @@ namespace Keeper.Warm
             if (valueAsAtom != null && valueAsAtom.Token == "_emptyList")
             {
                 return "[]";
+            }
+            else if (valueAsAtom != null && valueAsAtom.Token[0] == '#')
+            {
+                return valueAsAtom.Token.Substring(1);
             }
             else
             {
