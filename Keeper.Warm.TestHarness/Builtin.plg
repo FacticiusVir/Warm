@@ -25,9 +25,6 @@ goals([Goal|Tail]) :-
 	goals(Tail).
 goals([]).
 
-var(X):-
-	not(nonvar(X)).
-
 forAll([], Var, Test) :- !.
 forAll([Item|Tail], Var, Test):-
 	query(goals([unify(Item, Var), call(Test)])),
