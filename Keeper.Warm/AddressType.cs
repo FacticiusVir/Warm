@@ -4,6 +4,7 @@
 	{
         Blank,
         Code,
+        Retained,
         GlobalRegister,
 		Heap,
 		Stack,

@@ -17,10 +17,18 @@ namespace Keeper.Warm.Prolog
                                                      from close in Parse.Char(']')
                                                      select new ListInfo(items.GetOrElse(Enumerable.Empty<ITermInfo>()), tail.GetOrDefault());
 
+        private static Parser<StringInfo> StringParser = from open in Parse.Char('"')
+                                                         from text in Parse.CharExcept('"').Many().Text()
+                                                         from close in Parse.Char('"')
+                                                         select new StringInfo(text);
+
         private static Parser<AtomInfo> AtomParser = from name in (from first in Parse.Lower
                                                                    from tail in Parse.LetterOrDigit.Many()
                                                                    select new[] { first }.Concat(tail)).Text().Token()
                                                      select new AtomInfo(name);
+
+        private static Parser<AtomInfo> NumberParser = from digits in Parse.Digit.AtLeastOnce().Text()
+                                                       select new AtomInfo("#" + digits);
 
         private static Parser<VariableInfo> VariableParser = from name in (from first in Parse.Upper
                                                                            from tail in Parse.LetterOrDigit.Many()
@@ -36,7 +44,7 @@ namespace Keeper.Warm.Prolog
                                                                      from close in Parse.Char(')')
                                                                      select new CompoundTermInfo(header, terms);
 
-        private static Parser<ITermInfo> TermParser = (((Parser<ITermInfo>)ListParser).Or(CompoundTermParser).Or(AtomParser).Or(VariableParser)).Token();
+        private static Parser<ITermInfo> TermParser = (((Parser<ITermInfo>)ListParser).Or(StringParser).Or(CompoundTermParser).Or(AtomParser).Or(VariableParser).Or(NumberParser)).Token();
 
         private static Parser<Rule> FactParser = from head in CompoundTermParser.Token()
                                                  from end in Parse.Char('.')
@@ -148,6 +156,35 @@ namespace Keeper.Warm.Prolog
             }
         }
 
+        private class StringInfo
+            : ITermInfo
+        {
+            private string text;
+
+            public StringInfo(string text)
+            {
+                this.text = text;
+            }
+
+            public ITerm CreateTerm(Func<string, Variable> resolve)
+            {
+                return new CompoundTerm("_string", CreateStringList(this.text, 0));
+            }
+
+            private static ITerm CreateStringList(string text, int index)
+            {
+                if (index < text.Length)
+                {
+                    var tail = CreateStringList(text, index + 1);
+                    return ListInfo.CreateListTerm(new Atom("#" + (byte)text[index]), tail);
+                }
+                else
+                {
+                    return ListInfo.EmptyListTerm;
+                }
+            }
+        }
+
         private class VariableInfo
             : ITermInfo
         {
@@ -188,6 +225,8 @@ namespace Keeper.Warm.Prolog
             private IEnumerable<ITermInfo> items;
             private ITermInfo tail;
 
+            public readonly static ITerm EmptyListTerm = new Atom("_emptyList");
+
             public ListInfo(IEnumerable<ITermInfo> items, ITermInfo tail)
             {
                 this.items = items;
@@ -199,14 +238,21 @@ namespace Keeper.Warm.Prolog
                 var tailTerm =
                     this.tail != null
                     ? this.tail.CreateTerm(resolve)
-                    : new Atom("_emptyList");
+                    : EmptyListTerm;
 
                 foreach (var item in this.items.Reverse())
                 {
-                    tailTerm = new CompoundTerm("_list", item.CreateTerm(resolve), tailTerm);
+                    var headTerm = item.CreateTerm(resolve);
+
+                    tailTerm = CreateListTerm(headTerm, tailTerm);
                 }
 
                 return tailTerm;
+            }
+
+            internal static CompoundTerm CreateListTerm(ITerm headTerm, ITerm tailTerm)
+            {
+                return new CompoundTerm("_list", headTerm, tailTerm);
             }
         }
 

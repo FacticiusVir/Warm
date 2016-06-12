@@ -7,6 +7,7 @@
         Environment,
 		ContinuationPointer,
         StackPointer,
-        ChoicePointBase
+        ChoicePointBase,
+        NextRetainedPointer
 	}
 }

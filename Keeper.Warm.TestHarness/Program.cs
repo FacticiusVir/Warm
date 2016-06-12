@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Keeper.Warm
 {
@@ -13,7 +14,7 @@ namespace Keeper.Warm
             try
             {
                 var testHost = new Host();
-                
+
                 LoadRules(testHost, ".\\Builtin.plg");
                 LoadRules(testHost, ".\\Program.plg");
 
@@ -129,31 +130,74 @@ namespace Keeper.Warm
             {
                 var valueAsCompound = value as CompoundTerm;
 
-                if (valueAsCompound != null && valueAsCompound.Header.Token == "_list")
+                if (valueAsCompound != null)
                 {
-                    var items = new List<string>();
-
-                    var item = value;
-                    var itemAsCompound = item as CompoundTerm;
-
-                    while (itemAsCompound != null && itemAsCompound.Header.Token == "_list")
+                    switch (valueAsCompound.Header.Token)
                     {
-                        items.Add(Format(itemAsCompound.Terms.First()));
+                        case "_string":
+                            {
+                                var stringBuilder = new StringBuilder();
 
-                        item = itemAsCompound.Terms.Skip(1).First();
-                        itemAsCompound = item as CompoundTerm;
+                                stringBuilder.Append('"');
+
+                                var item = valueAsCompound.Terms.First();
+                                var itemAsCompound = valueAsCompound.Terms.First() as CompoundTerm;
+
+                                while (itemAsCompound != null && itemAsCompound.Header.Token == "_list")
+                                {
+                                    string codeToken = ((Atom)itemAsCompound.Terms.First()).Token;
+                                    int code = int.Parse(codeToken.Substring(1));
+
+                                    stringBuilder.Append((char)code);
+
+                                    item = itemAsCompound.Terms.Skip(1).First();
+                                    itemAsCompound = item as CompoundTerm;
+                                }
+
+                                string tailString = "";
+
+                                stringBuilder.Append('"');
+
+                                var itemAsAtom = item as Atom;
+
+                                if (itemAsAtom == null || itemAsAtom.Token != "_emptyList")
+                                {
+                                    tailString = "| " + Format(item);
+                                }
+
+                                return stringBuilder.ToString();
+                            }
+                        case "_list":
+                            {
+                                var items = new List<string>();
+
+                                var item = value;
+                                var itemAsCompound = valueAsCompound;
+
+                                while (itemAsCompound != null && itemAsCompound.Header.Token == "_list")
+                                {
+                                    items.Add(Format(itemAsCompound.Terms.First()));
+
+                                    item = itemAsCompound.Terms.Skip(1).First();
+                                    itemAsCompound = item as CompoundTerm;
+                                }
+
+                                string tailString = "";
+
+                                var itemAsAtom = item as Atom;
+
+                                if (itemAsAtom == null || itemAsAtom.Token != "_emptyList")
+                                {
+                                    tailString = "| " + Format(item);
+                                }
+
+                                return string.Format("[{0}{1}]", string.Join(", ", items), tailString);
+                            }
+                        default:
+                            {
+                                return string.Format("{0}({1})", valueAsCompound.Header.ToString(), string.Join(", ", valueAsCompound.Terms.Select(Format)));
+                            }
                     }
-
-                    string tailString = "";
-
-                    var itemAsAtom = item as Atom;
-
-                    if (itemAsAtom == null || itemAsAtom.Token != "_emptyList")
-                    {
-                        tailString = "| " + Format(item);
-                    }
-
-                    return string.Format("[{0}{1}]", string.Join(", ", items), tailString);
                 }
                 else
                 {

@@ -73,7 +73,14 @@ namespace Keeper.Warm
             switch (value.Tag)
             {
                 case Tag.Ref:
-                    return new Variable(value.Address.Pointer.ToString());
+                    string name = value.Address.Pointer.ToString();
+
+                    if(value.Address.Type == AddressType.Retained)
+                    {
+                        name = "R" + name;
+                    }
+
+                    return new Variable(name);
                 case Tag.Str:
                     Cell functorCell = new Cell(machine.DereferenceAndLoad(value.Address));
                     FunctorDescriptor functor = machine.GetFunctor(functorCell.Address.Pointer);
@@ -86,7 +93,7 @@ namespace Keeper.Warm
 
                         for (int termIndex = 0; termIndex < functor.Arity; termIndex++)
                         {
-                            terms[termIndex] = BuildTermFromHeap(machine, (value.Address + termIndex + 1).Pointer);
+                            terms[termIndex] = BuildTermFromAddress(machine, value.Address + termIndex + 1);
                         }
                     }
 
@@ -103,8 +110,8 @@ namespace Keeper.Warm
                         return new Atom(constantFunctor.Name);
                     }
                 case Tag.Lis:
-                    var headTerm = BuildTermFromHeap(machine, value.Address.Pointer);
-                    var TailTerm = BuildTermFromHeap(machine, (value.Address + 1).Pointer);
+                    var headTerm = BuildTermFromAddress(machine, value.Address);
+                    var TailTerm = BuildTermFromAddress(machine, (value.Address + 1));
 
                     return new ListPair(headTerm, (IListTail)TailTerm);
                 default:

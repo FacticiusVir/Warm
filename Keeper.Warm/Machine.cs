@@ -15,6 +15,7 @@ namespace Keeper.Warm
         private Trail trail;
         private Stack<Address> pdl;
 
+        private int[] retained;
         private int[] heap;
         private int[] code;
 
@@ -87,6 +88,18 @@ namespace Keeper.Warm
             }
         }
 
+        public Address NextRetainedPointer
+        {
+            get
+            {
+                return this.globalRegisters[(int)GlobalRegister.NextRetainedPointer];
+            }
+            set
+            {
+                this.globalRegisters[(int)GlobalRegister.NextRetainedPointer] = value;
+            }
+        }
+
         public Machine()
         {
             int baseSize = 1 << 10;
@@ -101,6 +114,7 @@ namespace Keeper.Warm
             this.stack = new BranchingStack(this.trail, baseSize);
             this.pdl = new Stack<Address>();
             this.code = new int[baseSize * 64];
+            this.retained = new int[baseSize];
 
             this.code[0] = (int)Opcode.Halt;
         }
@@ -112,9 +126,11 @@ namespace Keeper.Warm
             this.TopOfHeap = new Address(AddressType.Heap, variableArgumentCount);
             this.InstructionPointer = new Address(AddressType.Code, instructionPointer);
             this.ContinuationPointer = new Address(AddressType.Code, -1);
+            this.NextRetainedPointer = new Address(AddressType.Retained, 0);
             this.ChoicePointBase = 0;
             this.Environment = new Address(AddressType.Blank, 0);
             this.trail.Clear();
+            Array.Clear(this.retained, 0, this.retained.Length);
 
             this.stack.Pointer = -1;
 
@@ -246,6 +262,12 @@ namespace Keeper.Warm
                 case Opcode.StoreGlobalRegisterB0:
                     this.StoreGlobalRegisterValue(GlobalRegister.ChoicePointBase);
                     break;
+                case Opcode.LoadGlobalRegisterR:
+                    this.LoadGlobalRegisterValue(GlobalRegister.NextRetainedPointer);
+                    break;
+                case Opcode.StoreGlobalRegisterR:
+                    this.StoreGlobalRegisterValue(GlobalRegister.NextRetainedPointer);
+                    break;
                 case Opcode.Duplicate:
                     this.Duplicate();
                     break;
@@ -344,6 +366,9 @@ namespace Keeper.Warm
                     break;
                 case Opcode.ChoicePoint:
                     this.ChoicePoint(this.code[instructionPointer + 1]);
+                    break;
+                case Opcode.ChoicePointRelative:
+                    this.ChoicePoint(instructionPointer + this.code[instructionPointer + 1]);
                     break;
                 case Opcode.GetLevel:
                     this.GetLevel();
@@ -481,10 +506,15 @@ namespace Keeper.Warm
 
         private bool Unify()
         {
+            return this.Unify(new Cell(this.stack.Pop()).Address, new Cell(this.stack.Pop()).Address);
+        }
+
+        public bool Unify(Address left, Address right)
+        {
             pdl.Clear();
 
-            pdl.Push(new Cell(this.stack.Pop()).Address);
-            pdl.Push(new Cell(this.stack.Pop()).Address);
+            pdl.Push(left);
+            pdl.Push(right);
 
             bool fail = false;
 
@@ -749,6 +779,9 @@ namespace Keeper.Warm
                 case AddressType.Heap:
                     value = this.heap[address.Pointer];
                     break;
+                case AddressType.Retained:
+                    value = this.retained[address.Pointer];
+                    break;
                 case AddressType.Code:
                 default:
                     throw new ArgumentException("Invalid address type: " + address.Type);
@@ -769,12 +802,12 @@ namespace Keeper.Warm
         private void Store()
         {
             int value = this.stack.Pop();
-            Address address = new Address(this.stack.Pop());
+            Address address = new Cell(this.stack.Pop()).Address;
 
             StoreToAddress(address, value);
         }
 
-        private void StoreToAddress(Address address, int value)
+        public void StoreToAddress(Address address, int value)
         {
             switch (address.Type)
             {
@@ -784,6 +817,9 @@ namespace Keeper.Warm
                 case AddressType.Heap:
                     this.trail.AddItem(address, this.heap[address.Pointer]);
                     this.heap[address.Pointer] = value;
+                    break;
+                case AddressType.Retained:
+                    this.retained[address.Pointer] = value;
                     break;
                 case AddressType.Code:
                 default:
@@ -828,14 +864,128 @@ namespace Keeper.Warm
             Cell cellOne = new Cell(this.LoadFromStore(addressOne));
             Cell cellTwo = new Cell(this.LoadFromStore(addressTwo));
 
-            if (cellOne.Tag == Tag.Ref && (cellTwo.Tag != Tag.Ref || addressTwo < addressOne))
+            if (cellOne.Tag != Tag.Ref || (cellTwo.Tag == Tag.Ref && addressTwo > addressOne))
             {
-                this.StoreToAddress(addressOne, this.LoadFromStore(addressTwo));
+                this.Bind(addressTwo, addressOne);
             }
             else
             {
-                this.StoreToAddress(addressTwo, this.LoadFromStore(addressOne));
+                if (addressOne.Type == AddressType.Retained && addressTwo.Type != AddressType.Retained)
+                {
+                    addressTwo = this.CloneToRetained(addressTwo);
+                }
+                this.StoreToAddress(addressOne, this.LoadFromStore(addressTwo));
             }
+        }
+
+        public Address Clone(Address source, Dictionary<Address, Address> varLookup, Address? destination = null)
+        {
+            source = this.Dereference(source);
+
+            Cell cell = new Cell(this.LoadFromStore(source));
+
+            Address result = destination.GetValueOrDefault();
+
+            switch (cell.Tag)
+            {
+                case Tag.Con:
+                case Tag.Non:
+                    result = destination ?? this.TopOfHeap++;
+
+                    this.StoreToAddress(result, cell.Value);
+                    break;
+                case Tag.Ref:
+                    Address varAddress;
+
+                    if (!varLookup.TryGetValue(source, out varAddress))
+                    {
+                        varAddress = destination ?? this.TopOfHeap++;
+                        result = varAddress;
+                    }
+                    else
+                    {
+                        result = destination ?? varAddress;
+                    }
+
+                    this.StoreToAddress(result, new Cell(Tag.Ref, varAddress).Value);
+                    varLookup[source] = result;
+                    break;
+                case Tag.Str:
+                    Address functorAddress = this.Clone(cell.Address, varLookup);
+                    result = destination ?? this.TopOfHeap++;
+                    this.StoreToAddress(result, new Cell(Tag.Str, functorAddress).Value);
+                    break;
+                case Tag.Fun:
+                    if (destination.HasValue)
+                    {
+                        throw new Exception("Invalid location for functor cell");
+                    }
+                    FunctorDescriptor functor = this.GetFunctor(cell.Address.Value);
+                    result = this.TopOfHeap;
+                    this.StoreToAddress(this.TopOfHeap, new Cell(Tag.Fun, cell.Address).Value);
+                    this.TopOfHeap++;
+                    this.TopOfHeap += functor.Arity;
+                    for (int index = 0; index < functor.Arity; index++)
+                    {
+                        this.Clone(source + index + 1, varLookup, result + index + 1);
+                    }
+                    break;
+                default:
+                    throw new Exception($"Unsupported tag {cell.Tag}");
+            }
+
+            return result;
+        }
+
+        private Address CloneToRetained(Address source, Address? destination = null)
+        {
+            source = this.Dereference(source);
+
+            Cell cell = new Cell(this.LoadFromStore(source));
+
+            Address result;
+
+            switch (cell.Tag)
+            {
+                case Tag.Con:
+                case Tag.Non:
+                    result = destination ?? this.NextRetainedPointer++;
+                    this.StoreToAddress(result, cell.Value);
+                    break;
+                case Tag.Ref:
+                    Address varAddress;
+
+                    varAddress = destination ?? this.NextRetainedPointer++;
+                    result = varAddress;
+
+                    this.StoreToAddress(result, new Cell(Tag.Ref, varAddress).Value);
+                    this.Bind(source, result);
+                    break;
+                case Tag.Str:
+                    Address functorAddress = this.CloneToRetained(cell.Address);
+                    result = destination ?? this.NextRetainedPointer++;
+                    this.StoreToAddress(result, new Cell(Tag.Str, functorAddress).Value);
+                    break;
+                case Tag.Fun:
+                    if (destination.HasValue)
+                    {
+                        throw new Exception("Invalid location for functor cell");
+                    }
+                    FunctorDescriptor functor = this.GetFunctor(cell.Address.Value);
+                    result = this.NextRetainedPointer;
+                    this.StoreToAddress(this.NextRetainedPointer, new Cell(Tag.Fun, cell.Address).Value);
+                    this.NextRetainedPointer++;
+                    this.NextRetainedPointer += functor.Arity;
+                    for (int index = 0; index < functor.Arity; index++)
+                    {
+                        this.CloneToRetained(source + index + 1, result + index + 1);
+                    }
+                    break;
+                default:
+                    throw new Exception($"Unsupported tag {cell.Tag}");
+            }
+
+            return result;
         }
 
         private int GetInstructionSize(Opcode opcode)

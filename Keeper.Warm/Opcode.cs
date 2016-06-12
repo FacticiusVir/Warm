@@ -27,10 +27,12 @@
         Callback = Int32Operand | 0 << 8 | 17,
         Pop = NoOperand | 0 << 8 | 18,
         EndTrace = Int32Operand | 0 << 8 | 19,
+        ChoicePointRelative = Int32Operand | 0 << 8 | 20,
 
         LoadGlobalRegisterBase = NoOperand | 1 << 8,
         LoadGlobalRegisterH = LoadGlobalRegisterBase | GlobalRegister.TopOfHeap,
         LoadGlobalRegisterB0 = LoadGlobalRegisterBase | GlobalRegister.ChoicePointBase,
+        LoadGlobalRegisterR = LoadGlobalRegisterBase | GlobalRegister.NextRetainedPointer,
 
         ApplyTagBase = NoOperand | 2 << 8,
         ApplyTagRef = ApplyTagBase | Tag.Ref,
@@ -81,6 +83,7 @@
         StoreGlobalRegisterBase = NoOperand | 11 << 8,
         StoreGlobalRegisterH = StoreGlobalRegisterBase | GlobalRegister.TopOfHeap,
         StoreGlobalRegisterB0 = StoreGlobalRegisterBase | GlobalRegister.ChoicePointBase,
+        StoreGlobalRegisterR = StoreGlobalRegisterBase | GlobalRegister.NextRetainedPointer,
 
         LoadLocalAddress = Int32Operand | 12 << 8,
     }

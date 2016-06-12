@@ -16,9 +16,29 @@ namespace Keeper.Warm
 
         public Host()
         {
+            this.AddBuiltin("number", 1, new Opcode[]
+                {
+                    Opcode.Allocate,
+                    (Opcode)0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Deref,
+                    Opcode.Load,
+                    Opcode.Callback,
+                    (Opcode)this.machine.AddCallback(this.IsNumber),
+                    Opcode.Pop,
+                    Opcode.Deallocate,
+                    (Opcode)1,
+                    Opcode.Proceed
+                });
+
             this.AddBuiltin("fail", 0, new Opcode[]
                 {
                     Opcode.Fail
+                });
+
+            this.AddBuiltin("true", 0, new Opcode[]
+                {
+                    Opcode.Proceed
                 });
 
             this.AddBuiltin("nonvar", 1, new Opcode[]
@@ -26,6 +46,7 @@ namespace Keeper.Warm
                     Opcode.Allocate,
                     (Opcode)0,
                     Opcode.LoadArgumentAddress0,
+                    Opcode.Deref,
                     Opcode.Load,
                     Opcode.GetTag,
                     Opcode.LoadConstant,
@@ -34,41 +55,142 @@ namespace Keeper.Warm
                     (Opcode)3,
                     Opcode.Fail,
                     Opcode.Deallocate,
-                    (Opcode)0,
+                    (Opcode)1,
                     Opcode.Proceed
                 });
 
-            int testCallbackIndex = this.machine.AddCallback(this.Call);
+            this.AddBuiltin("clone", 2, new Opcode[]
+                {
+                    Opcode.Callback,
+                    (Opcode)this.machine.AddCallback(this.Clone),
+                    Opcode.Pop,
+                    Opcode.Proceed
+                });
 
             this.AddBuiltin("call", 1, new Opcode[]
                 {
                     Opcode.Allocate,
                     (Opcode)0,
-                    Opcode.LoadArgumentAddress0,
-                    Opcode.Load,
                     Opcode.GetLevel,
                     Opcode.StoreGlobalRegisterB0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Deref,
+                    Opcode.Load,
                     Opcode.Callback,
-                    (Opcode)testCallbackIndex,
+                    (Opcode)this.machine.AddCallback(this.Call),
                     Opcode.Pop,
                     Opcode.Deallocate,
-                    (Opcode)0,
+                    (Opcode)1,
                     Opcode.Proceed
                 });
+
+            this.AddBuiltin("alloc", 1, new Opcode[]
+                {
+                    Opcode.Allocate,
+                    (Opcode)0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Load,
+                    Opcode.LoadGlobalRegisterR,
+                    Opcode.LoadGlobalRegisterR,
+                    Opcode.ApplyTagRef,
+                    Opcode.Store,
+                    Opcode.LoadGlobalRegisterR,
+                    Opcode.ApplyTagRef,
+                    Opcode.Unify,
+                    Opcode.LoadGlobalRegisterR,
+                    Opcode.Increment,
+                    Opcode.StoreGlobalRegisterR,
+                    Opcode.Deallocate,
+                    (Opcode)1,
+                    Opcode.Proceed
+                });
+
+            this.AddBuiltin("query", 1, new Opcode[]
+                {
+                    Opcode.Allocate,
+                    (Opcode)2,
+                    Opcode.GetLevel,
+                    Opcode.StoreLocal,
+                    (Opcode)0,
+                    Opcode.ChoicePointRelative,
+                    (Opcode)23,
+                    Opcode.GetLevel,
+                    Opcode.StoreLocal,
+                    (Opcode)1,
+                    Opcode.ChoicePointRelative,
+                    (Opcode)14,
+                    Opcode.GetLevel,
+                    Opcode.StoreGlobalRegisterB0,
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Deref,
+                    Opcode.Load,
+                    Opcode.Callback,
+                    (Opcode)this.machine.AddCallback(this.Call),
+                    Opcode.Pop,
+                    Opcode.LoadLocal,
+                    (Opcode)1,
+                    Opcode.Cut,
+                    Opcode.Fail,
+                    Opcode.LoadLocal,
+                    (Opcode)0,
+                    Opcode.Cut,
+                    Opcode.Fail,
+                    Opcode.Deallocate,
+                    (Opcode)1,
+                    Opcode.Proceed
+                });
+
+            var varX = new Variable("X");
+            var varY = new Variable("Y");
+
+            this.AddRule(new Rule(new CompoundTerm("stringToCodes", new CompoundTerm("_string", varX), varX), new CompoundTerm("forAll", varX, varY, new CompoundTerm("number", varY))));
         }
 
-        private bool Call(Machine machine)
+        private bool Clone(Machine machine)
         {
-            var goalCell = new Cell(machine.DereferenceAndLoad(machine.StackPointer));
+            var varLookup = new Dictionary<Address, Address>();
 
-            if (goalCell.Tag != Tag.Str)
+            Address result = this.machine.Clone(machine.StackPointer, varLookup);
+
+            return this.machine.Unify(machine.StackPointer - 1, result);
+        }
+
+        private bool IsNumber(Machine machine)
+        {
+            var cell = new Cell(machine.LoadFromStore(machine.StackPointer));
+
+            if (cell.Tag != Tag.Con)
             {
-                System.Diagnostics.Debug.WriteLine("Not a compound term");
+                System.Diagnostics.Debug.WriteLine("Not a constant term");
 
                 return false;
             }
 
-            var functorCell = new Cell(machine.LoadFromStore(goalCell.Address));
+            var functor = this.machine.GetFunctor(cell.Address.Value);
+
+            return functor.Name.StartsWith("#");
+        }
+
+        private bool Call(Machine machine)
+        {
+            var goalCell = new Cell(machine.LoadFromStore(machine.StackPointer));
+
+            Cell functorCell;
+
+            if (goalCell.Tag == Tag.Str)
+            {
+                functorCell = new Cell(machine.LoadFromStore(goalCell.Address));
+            }
+            else if (goalCell.Tag == Tag.Con)
+            {
+                functorCell = goalCell;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("Not a valid goal");
+
+                return false;
+            }
 
             var functor = machine.GetFunctor(functorCell.Address.Pointer);
 
