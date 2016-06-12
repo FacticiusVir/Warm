@@ -1,5 +1,8 @@
 ﻿unify(X, X).
 
+var(X) :-
+	not(nonvar(X)).
+
 contains(X, [Y|Tail]) :-
 	nonvar(X), unify(X, Y), !.
 contains(X, [X|Tail]).
@@ -9,6 +12,9 @@ contains(X, [Head|Tail]) :-
 append([], List, List) :- !.
 append([Head|Tail], List, [Head|Rest]) :-
     append(Tail, List, Rest).
+
+once(X) :-
+	call(X), !.
 
 not(X) :-
 	call(X), !, fail.

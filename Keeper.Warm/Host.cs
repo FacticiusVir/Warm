@@ -10,7 +10,7 @@ namespace Keeper.Warm
         private Compiler compiler = new Compiler();
         private Dictionary<RuleLabel, RuleData> ruleLookup = new Dictionary<RuleLabel, RuleData>();
         private Dictionary<FunctorDescriptor, int> functorLookup = new Dictionary<FunctorDescriptor, int>();
-        private int topOfCodePointer = 128;
+        private int topOfCodePointer = 0;
 
         private const int thunkSize = 4;
 
@@ -41,19 +41,32 @@ namespace Keeper.Warm
                     Opcode.Proceed
                 });
 
+            var nonvar1 = new FunctorDescriptor
+            {
+                Name = "nonvar",
+                Arity = 1
+            };
+
+            int nonvarFunctorIndex = machine.AddFunctor(nonvar1);
+
             this.AddBuiltin("nonvar", 1, new Opcode[]
                 {
                     Opcode.Allocate,
                     (Opcode)0,
+                    Opcode.Trace,
+                    (Opcode)nonvarFunctorIndex,
                     Opcode.LoadArgumentAddress0,
                     Opcode.Deref,
                     Opcode.Load,
+                    Opcode.Deref,
                     Opcode.GetTag,
                     Opcode.LoadConstant,
                     (Opcode)Tag.Ref,
                     Opcode.BranchNotEqual,
                     (Opcode)3,
                     Opcode.Fail,
+                    Opcode.EndTrace,
+                    (Opcode)nonvarFunctorIndex,
                     Opcode.Deallocate,
                     (Opcode)1,
                     Opcode.Proceed
@@ -317,7 +330,7 @@ namespace Keeper.Warm
 
                 this.ruleLookup[label] = ruleData;
 
-                Console.WriteLine("Define new");
+                Console.WriteLine("Define New");
             }
             else if (ruleData.IsDefined)
             {
