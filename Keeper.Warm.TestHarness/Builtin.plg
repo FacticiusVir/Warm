@@ -33,10 +33,29 @@ forAll([Item|Tail], Var, Test):-
 concat(Left, Right, Both) :-
 	nonvar(Left),
 	nonvar(Right),
+	!,
 	stringToCodes(Left, LeftCodes),
 	stringToCodes(Right, RightCodes),
 	append(LeftCodes, RightCodes, BothCodes),
 	stringToCodes(Both, BothCodes).
+
+concat(Left, Right, Both) :-
+	nonvar(Left),
+	nonvar(Both),
+	!,
+	stringToCodes(Left, LeftCodes),
+	stringToCodes(Both, BothCodes),
+	append(LeftCodes, RightCodes, BothCodes),
+	stringToCodes(Right, RightCodes).
+
+concat(Left, Right, Both) :-
+	nonvar(Both),
+	nonvar(Right),
+	!,
+	stringToCodes(Both, BothCodes),
+	stringToCodes(Right, RightCodes),
+	append(LeftCodes, RightCodes, BothCodes),
+	stringToCodes(Left, LeftCodes).
 
 findAll(Goal, Term, Results) :-
 	alloc(Accumulator),

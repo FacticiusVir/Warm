@@ -41,24 +41,15 @@ namespace Keeper.Warm
                     Opcode.Proceed
                 });
 
-            var nonvar1 = new FunctorDescriptor
-            {
-                Name = "nonvar",
-                Arity = 1
-            };
-
-            int nonvarFunctorIndex = machine.AddFunctor(nonvar1);
-
-            this.AddBuiltin("nonvar", 1, new Opcode[]
+            this.AddBuiltin("nonvar", 1, functorIndex => new Opcode[]
                 {
                     Opcode.Allocate,
                     (Opcode)0,
                     Opcode.Trace,
-                    (Opcode)nonvarFunctorIndex,
+                    (Opcode)functorIndex,
                     Opcode.LoadArgumentAddress0,
                     Opcode.Deref,
                     Opcode.Load,
-                    Opcode.Deref,
                     Opcode.GetTag,
                     Opcode.LoadConstant,
                     (Opcode)Tag.Ref,
@@ -66,7 +57,7 @@ namespace Keeper.Warm
                     (Opcode)3,
                     Opcode.Fail,
                     Opcode.EndTrace,
-                    (Opcode)nonvarFunctorIndex,
+                    (Opcode)functorIndex,
                     Opcode.Deallocate,
                     (Opcode)1,
                     Opcode.Proceed
@@ -230,6 +221,19 @@ namespace Keeper.Warm
             machine.Call(ruleData.FirstThunkPointer);
 
             return true;
+        }
+
+        private void AddBuiltin(string name, int arity, Func<int, Opcode[]> code)
+        {
+            var functor = new FunctorDescriptor
+            {
+                Name = name,
+                Arity = arity
+            };
+
+            int functorIndex = machine.AddFunctor(functor);
+
+            this.AddBuiltin(name, arity, code(functorIndex));
         }
 
         private void AddBuiltin(string name, int arity, Opcode[] code)
