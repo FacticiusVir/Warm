@@ -57,10 +57,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Keeper.Warm.Prolog\Keeper.Warm.Prolog.csproj">
-      <Project>{302c8c63-3ab4-49e1-b0cd-69ba93c81ffd}</Project>
-      <Name>Keeper.Warm.Prolog</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Keeper.Warm\Keeper.Warm.csproj">
       <Project>{229c0a04-1dc0-4125-9c9c-6c48c3eec250}</Project>
       <Name>Keeper.Warm</Name>

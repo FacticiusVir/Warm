@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="MachineTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WordTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Keeper.Warm.Core\Keeper.Warm.Core.csproj">
