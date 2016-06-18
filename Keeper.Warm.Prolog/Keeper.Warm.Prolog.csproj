@@ -45,14 +45,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Atom.cs" />
+    <Compile Include="CompoundTerm.cs" />
+    <Compile Include="ListPair.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Keeper.Warm\Keeper.Warm.csproj">
-      <Project>{229c0a04-1dc0-4125-9c9c-6c48c3eec250}</Project>
-      <Name>Keeper.Warm</Name>
-    </ProjectReference>
+    <Compile Include="Term.cs" />
+    <Compile Include="Variable.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
