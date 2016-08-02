@@ -15,6 +15,10 @@
         Nop = NoOperand | 0 << 8 | 12,
         ChoicePoint = Int64Operand | 0 << 8 | 13,
 
+        LoadPointerBase = Int64Operand | 2 << 8,
+        LoadPointerHeap = LoadPointerBase | (int)AddressType.Heap,
+        LoadPointerRetained = LoadPointerBase | (int)AddressType.Retained,
+
         LoadConstantBase = NoOperand | 3 << 8,
         LoadConstant0 = LoadConstantBase | 0,
         LoadConstant1 = LoadConstantBase | 1,
@@ -37,6 +41,12 @@
         ArithmeticBase = NoOperand | 8 << 8,
         Increment = ArithmeticBase | 0,
         Add = ArithmeticBase | 1,
+        Sub = ArithmeticBase | 2,
+        Mul = ArithmeticBase | 3,
+        Div = ArithmeticBase | 4,
+        And = ArithmeticBase | 5,
+        Or = ArithmeticBase | 6,
+        Xor = ArithmeticBase | 7,
 
         LoadArgumentAddressBase = NoOperand | 9 << 8,
         LoadArgumentAddress0 = LoadArgumentAddressBase | 0,

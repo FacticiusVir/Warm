@@ -49,12 +49,20 @@
     <Compile Include="CompoundTerm.cs" />
     <Compile Include="ListPair.cs" />
     <Compile Include="Parser.cs" />
+    <Compile Include="Platform.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tag.cs" />
     <Compile Include="Term.cs" />
     <Compile Include="Variable.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Keeper.Warm.Core\Keeper.Warm.Core.csproj">
+      <Project>{cf73af0b-de7e-4deb-a48b-13368dbf4f4f}</Project>
+      <Name>Keeper.Warm.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -8,20 +8,21 @@ namespace Keeper.Warm
     {
         private Dictionary<MethodToken, MethodInfo> methods = new Dictionary<MethodToken, MethodInfo>();
 
-        public void DefineMethod(MethodToken token, Opcode[] code, List<MethodToken> methodTable)
+        public void DefineMethod(MethodToken token, Opcode[] code, MethodToken[] methodTable = null, int localCount = 0)
         {
             var methodInfo = new MethodInfo()
             {
                 Code = code,
-                MethodTable = methodTable
+                MethodTable = methodTable,
+                LocalCount = localCount
             };
 
             this.methods.Add(token, methodInfo);
         }
 
-        public Thread SpawnThread(MethodToken entryPoint)
+        public Thread SpawnThread(MethodToken entryPoint, params long[] initialStack)
         {
-            return new Thread(this, entryPoint);
+            return new Thread(this, entryPoint, initialStack, 1024);
         }
 
         private static int GetInstructionSize(Opcode opcode)
@@ -44,15 +45,20 @@ namespace Keeper.Warm
         public class Thread
         {
             private Machine parent;
-            private Stack<Word> stack = new Stack<Word>();
+            private WritableStack<Word> stack;
             private Stack<MethodStackFrame> methodStack = new Stack<MethodStackFrame>();
+            private Word[] heap;
 
-            public Thread(Machine parent, MethodToken entryPoint)
+            public Thread(Machine parent, MethodToken entryPoint, long[] initialStack, int heapSize)
             {
                 this.parent = parent;
+                this.stack = new WritableStack<Word>(initialStack.Select(x => new Word { Int64 = x }));
+                this.heap = new Word[heapSize];
+
+                var entryPointInfo = this.parent.methods[entryPoint];
 
                 this.methodStack.Push(
-                    new MethodStackFrame(this.stack, 0)
+                    new MethodStackFrame(this.stack, entryPointInfo.LocalCount, entryPoint.ReturnValues)
                     {
                         Token = entryPoint
                     });
@@ -78,20 +84,36 @@ namespace Keeper.Warm
 
                 int nextInstructionPointer = this.CurrentFrame.InstructionPointer + opcodeStep;
 
+                int opcodeSuffix = (int)currentOpcode & 0xFF;
+
                 switch (currentOpcode)
                 {
-                    case Opcode.Halt:
-                        return StepResult.Halt;
-                    case Opcode.Duplicate:
-                        this.Duplicate();
+                    case Opcode.Add:
+                        this.Add();
                         break;
                     case Opcode.Call:
                         int tokenIndex = (int)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
                         var callTarget = opCodes.MethodTable[tokenIndex];
+                        this.CurrentFrame.InstructionPointer = nextInstructionPointer;
                         this.Call(callTarget);
+                        return StepResult.Continue;
+                    case Opcode.Duplicate:
+                        this.Duplicate();
                         break;
-                    case Opcode.Proceed:
-                        this.Proceed();
+                    case Opcode.Halt:
+                        return StepResult.Halt;
+                    case Opcode.Load:
+                        this.Load();
+                        break;
+                    case Opcode.LoadArgumentAddress0:
+                    case Opcode.LoadArgumentAddress1:
+                    case Opcode.LoadArgumentAddress2:
+                    case Opcode.LoadArgumentAddress3:
+                    case Opcode.LoadArgumentAddress4:
+                    case Opcode.LoadArgumentAddress5:
+                    case Opcode.LoadArgumentAddress6:
+                    case Opcode.LoadArgumentAddress7:
+                        this.LoadArgumentAddress(opcodeSuffix);
                         break;
                     case Opcode.LoadConstant0:
                     case Opcode.LoadConstant1:
@@ -101,23 +123,102 @@ namespace Keeper.Warm
                     case Opcode.LoadConstant5:
                     case Opcode.LoadConstant6:
                     case Opcode.LoadConstant7:
-                        this.LoadConstant(new Word { Int64 = (int)currentOpcode & 0xFF });
+                        this.LoadConstant(new Word { Int64 = opcodeSuffix });
                         break;
-                    case Opcode.Add:
-                        this.Add();
+                    case Opcode.LoadLocalAddress:
+                        int localIndex = (int)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
+                        this.LoadLocalAddress(localIndex);
+                        break;
+                    case Opcode.LoadPointerHeap:
+                    case Opcode.LoadPointerRetained:
+                        long pointer = (long)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
+                        this.LoadConstant(new Word { Address = new Address((AddressType)opcodeSuffix, pointer) });
+                        break;
+                    case Opcode.Proceed:
+                        this.Proceed();
+                        return StepResult.Continue;
+                    case Opcode.Store:
+                        this.Store();
                         break;
                     default:
                         throw new Exception($"Unknown opcode: {currentOpcode}");
                 }
 
                 this.CurrentFrame.InstructionPointer = nextInstructionPointer;
-
+                
                 return StepResult.Continue;
+            }
+
+            private void Store()
+            {
+                Word address = this.CurrentFrame.Pop();
+
+                Word value = this.CurrentFrame.Pop();
+
+                this.StoreToAddress(address.Address, value);
+            }
+
+            private void Load()
+            {
+                Word address = this.CurrentFrame.Pop();
+
+                Word value = this.LoadFromAddress(address.Address);
+
+                this.CurrentFrame.Push(value);
+            }
+
+            private Word LoadFromAddress(Address address)
+            {
+                switch (address.Type)
+                {
+                    case AddressType.Stack:
+                        return this.stack[(int)address.Pointer];
+                    case AddressType.Heap:
+                        return this.heap[(int)address.Pointer];
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+
+            private void StoreToAddress(Address address, Word value)
+            {
+                switch (address.Type)
+                {
+                    case AddressType.Stack:
+                        this.stack[(int)address.Pointer] = value;
+                        break;
+                    case AddressType.Heap:
+                        this.heap[(int)address.Pointer] = value;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+
+            private void LoadArgumentAddress(int argumentIndex)
+            {
+                Word argumentAddress = this.CurrentFrame.GetArgumentAddress(argumentIndex);
+
+                this.stack.Push(argumentAddress);
+            }
+
+            private void LoadLocalAddress(int localIndex)
+            {
+                Word localAddress = this.CurrentFrame.GetLocalAddress(localIndex);
+
+                this.stack.Push(localAddress);
+            }
+
+            public void Push(long value)
+            {
+                this.CurrentFrame.Push(new Word() { Int64 = value });
             }
 
             private void Proceed()
             {
-                throw new NotImplementedException();
+                this.CurrentFrame.Clear();
+
+                this.methodStack.Pop();
             }
 
             private void Call(MethodToken callTarget)
@@ -128,8 +229,10 @@ namespace Keeper.Warm
                 }
                 else
                 {
+                    var method = this.parent.methods[callTarget];
+
                     this.methodStack.Push(
-                        new MethodStackFrame(this.stack, 0)
+                        new MethodStackFrame(this.stack, method.LocalCount, callTarget.ReturnValues)
                         {
                             Token = callTarget
                         });
@@ -172,6 +275,14 @@ namespace Keeper.Warm
                     return this.stack.Select(x => x.Int64);
                 }
             }
+
+            public IEnumerable<long> Heap
+            {
+                get
+                {
+                    return this.heap.Select(x => x.Int64);
+                }
+            }
         }
 
         private class MethodInfo
@@ -182,7 +293,13 @@ namespace Keeper.Warm
                 internal set;
             }
 
-            public List<MethodToken> MethodTable
+            public int LocalCount
+            {
+                get;
+                internal set;
+            }
+
+            public MethodToken[] MethodTable
             {
                 get;
                 internal set;
@@ -191,15 +308,17 @@ namespace Keeper.Warm
 
         private class MethodStackFrame
         {
-            private Stack<Word> threadStack;
-            private int stackBase;
-            private int localCount;
+            private readonly WritableStack<Word> threadStack;
+            private readonly int stackBase;
+            private readonly int localCount;
+            private readonly int returnCount;
 
-            public MethodStackFrame(Stack<Word> threadStack, int localCount)
+            public MethodStackFrame(WritableStack<Word> threadStack, int localCount = 0, int returnCount = 0)
             {
                 this.threadStack = threadStack;
-                this.stackBase = this.threadStack.Count;
+                this.stackBase = this.threadStack.Count - 1;
                 this.localCount = localCount;
+                this.returnCount = returnCount;
                 for (int index = 0; index < localCount; index++)
                 {
                     this.threadStack.Push(new Word());
@@ -225,7 +344,7 @@ namespace Keeper.Warm
 
             public Word Pop()
             {
-                if (this.threadStack.Count <= (this.stackBase + this.localCount))
+                if (this.threadStack.Count <= (this.stackBase + this.localCount + 1))
                 {
                     throw new Exception("Invalid stack pop.");
                 }
@@ -237,7 +356,7 @@ namespace Keeper.Warm
 
             public Word Peek()
             {
-                if (this.threadStack.Count <= (this.stackBase + this.localCount))
+                if (this.threadStack.Count <= (this.stackBase + this.localCount + 1))
                 {
                     throw new Exception("Invalid stack peek.");
                 }
@@ -249,10 +368,37 @@ namespace Keeper.Warm
 
             public void Clear()
             {
-                while (this.threadStack.Count > this.stackBase - this.Token.Arity)
+                Word[] returnValues = null;
+
+                if (this.returnCount > 0)
+                {
+                    returnValues = new Word[this.returnCount];
+                }
+
+                for (int index = 0; index < this.returnCount; index++)
+                {
+                    returnValues[index] = this.threadStack.Pop();
+                }
+
+                while (this.threadStack.Count > this.stackBase - this.Token.Arity + 1)
                 {
                     this.threadStack.Pop();
                 }
+
+                for (int index = 0; index < this.returnCount; index++)
+                {
+                    this.threadStack.Push(returnValues[index]);
+                }
+            }
+
+            public Word GetArgumentAddress(int argumentIndex)
+            {
+                return new Word { Address = new Address(AddressType.Stack, this.stackBase - argumentIndex) };
+            }
+
+            public Word GetLocalAddress(int localIndex)
+            {
+                return new Word { Address = new Address(AddressType.Stack, this.stackBase + localIndex + 1) };
             }
         }
     }
