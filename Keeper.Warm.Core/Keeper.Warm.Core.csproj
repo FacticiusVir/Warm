@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Address.cs" />
     <Compile Include="AddressType.cs" />
+    <Compile Include="CodeGenerator.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="MethodToken.cs" />
     <Compile Include="Opcode.cs" />

@@ -79,6 +79,30 @@ namespace Keeper.Warm.Test
         }
 
         [TestMethod]
+        public void CanShiftLeft()
+        {
+            var target = new Machine();
+
+            var methodToken = new MethodToken(0);
+
+            target.DefineMethod(methodToken, new Opcode[]
+                {
+                    Opcode.LoadConstant2,
+                    Opcode.LoadConstant3,
+                    Opcode.Shl
+                },
+                null);
+
+            var thread = target.SpawnThread(methodToken);
+
+            Assert.AreEqual(StepResult.Continue, thread.Step());
+            Assert.AreEqual(StepResult.Continue, thread.Step());
+            Assert.AreEqual(StepResult.Continue, thread.Step());
+            Assert.AreEqual(1, thread.Stack.Count());
+            Assert.AreEqual(16, thread.Stack.First());
+        }
+
+        [TestMethod]
         public void CanLoadArguments()
         {
             var target = new Machine();
@@ -177,11 +201,11 @@ namespace Keeper.Warm.Test
             target.DefineMethod(methodToken, new Opcode[]
                 {
                     Opcode.LoadConstant5,
+                    Opcode.LoadConstant0,
                     Opcode.LoadPointerHeap,
-                    0,
                     Opcode.Store,
+                    Opcode.LoadConstant0,
                     Opcode.LoadPointerHeap,
-                    0,
                     Opcode.Load
                 });
 
@@ -189,12 +213,56 @@ namespace Keeper.Warm.Test
             Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(StepResult.Continue, thread.Step());
+            Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(0, thread.Stack.Count());
+            Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(StepResult.Continue, thread.Step());
             Assert.AreEqual(1, thread.Stack.Count());
             Assert.AreEqual(5, thread.Stack.First());
             Assert.AreEqual(5, thread.Heap.ElementAt(0));
+        }
+
+        [TestMethod]
+        public void CanRunToHalt()
+        {
+            var target = new Machine();
+
+            var methodToken = new MethodToken(1, 1);
+
+            target.DefineMethod(methodToken, new Opcode[]
+                {
+                    Opcode.LoadArgumentAddress0,
+                    Opcode.Load,
+                    Opcode.LoadConstant2,
+                    Opcode.Add,
+                    Opcode.Proceed
+                });
+
+            var callerToken = new MethodToken(0, 1);
+
+            target.DefineMethod(callerToken, new Opcode[]
+            {
+                Opcode.LoadConstant3,
+                Opcode.Call,
+                0,
+                Opcode.LoadConstant5,
+                Opcode.Add,
+                Opcode.Proceed
+            }, new[] { methodToken });
+
+            var thread = target.SpawnThread(callerToken);
+
+            StepResult runningState = StepResult.Continue;
+
+            while (runningState != StepResult.Halt)
+            {
+                Assert.AreEqual(StepResult.Continue, runningState);
+                runningState = thread.Step();
+            }
+
+            Assert.AreEqual(1, thread.Stack.Count());
+            Assert.AreEqual(10, thread.Stack.First());
         }
     }
 }

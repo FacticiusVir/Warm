@@ -86,10 +86,19 @@ namespace Keeper.Warm
 
                 int opcodeSuffix = (int)currentOpcode & 0xFF;
 
+                int operand = opcodeStep > 1
+                                ? (int)opCodes.Code[this.CurrentFrame.InstructionPointer + 1]
+                                : 0;
+
+                System.Diagnostics.Debug.WriteLine(currentOpcode);
+
                 switch (currentOpcode)
                 {
                     case Opcode.Add:
-                        this.Add();
+                        this.Arithmetic(Word.Add);
+                        break;
+                    case Opcode.And:
+                        this.Arithmetic(Word.And);
                         break;
                     case Opcode.Call:
                         int tokenIndex = (int)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
@@ -102,6 +111,9 @@ namespace Keeper.Warm
                         break;
                     case Opcode.Halt:
                         return StepResult.Halt;
+                    case Opcode.Increment:
+                        this.Arithmetic(Word.Increment);
+                        break;
                     case Opcode.Load:
                         this.Load();
                         break;
@@ -115,6 +127,9 @@ namespace Keeper.Warm
                     case Opcode.LoadArgumentAddress7:
                         this.LoadArgumentAddress(opcodeSuffix);
                         break;
+                    case Opcode.LoadConstant:
+                        this.LoadConstant(new Word { Int32 = operand });
+                        break;
                     case Opcode.LoadConstant0:
                     case Opcode.LoadConstant1:
                     case Opcode.LoadConstant2:
@@ -125,27 +140,40 @@ namespace Keeper.Warm
                     case Opcode.LoadConstant7:
                         this.LoadConstant(new Word { Int64 = opcodeSuffix });
                         break;
+                    case Opcode.LoadLocal:
+                        this.LoadLocal(operand);
+                        break;
                     case Opcode.LoadLocalAddress:
-                        int localIndex = (int)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
-                        this.LoadLocalAddress(localIndex);
+                        this.LoadLocalAddress(operand);
                         break;
                     case Opcode.LoadPointerHeap:
                     case Opcode.LoadPointerRetained:
-                        long pointer = (long)opCodes.Code[this.CurrentFrame.InstructionPointer + 1];
-                        this.LoadConstant(new Word { Address = new Address((AddressType)opcodeSuffix, pointer) });
+                        this.LoadPointer((AddressType)opcodeSuffix);
+                        break;
+                    case Opcode.Or:
+                        this.Arithmetic(Word.Or);
                         break;
                     case Opcode.Proceed:
                         this.Proceed();
                         return StepResult.Continue;
+                    case Opcode.Shl:
+                        this.Arithmetic(Word.ShiftLeft);
+                        break;
+                    case Opcode.Shr:
+                        this.Arithmetic(Word.ShiftRight);
+                        break;
                     case Opcode.Store:
                         this.Store();
+                        break;
+                    case Opcode.StoreLocal:
+                        this.StoreLocal(operand);
                         break;
                     default:
                         throw new Exception($"Unknown opcode: {currentOpcode}");
                 }
 
                 this.CurrentFrame.InstructionPointer = nextInstructionPointer;
-                
+
                 return StepResult.Continue;
             }
 
@@ -209,6 +237,24 @@ namespace Keeper.Warm
                 this.stack.Push(localAddress);
             }
 
+            private void LoadLocal(int localIndex)
+            {
+                Address localAddress = this.CurrentFrame.GetLocalAddress(localIndex).Address;
+
+                Word value = this.LoadFromAddress(localAddress);
+
+                this.stack.Push(value);
+            }
+
+            private void StoreLocal(int localIndex)
+            {
+                Address localAddress = this.CurrentFrame.GetLocalAddress(localIndex).Address;
+
+                Word value = this.stack.Pop();
+
+                this.StoreToAddress(localAddress, value);
+            }
+
             public void Push(long value)
             {
                 this.CurrentFrame.Push(new Word() { Int64 = value });
@@ -246,16 +292,34 @@ namespace Keeper.Warm
                 this.CurrentFrame.Push(value);
             }
 
-            private void Add()
+            private void Arithmetic(Func<Word, Word> @operator)
             {
-                Word a = this.CurrentFrame.Pop();
+                Word value = this.CurrentFrame.Pop();
+                this.CurrentFrame.Push(@operator(value));
+            }
+
+            private void Arithmetic(Func<Word, Word, Word> @operator)
+            {
                 Word b = this.CurrentFrame.Pop();
-                this.CurrentFrame.Push(new Word { Int64 = a.Int64 + b.Int64 });
+                Word a = this.CurrentFrame.Pop();
+                this.CurrentFrame.Push(@operator(a, b));
+            }
+
+            private void LoadPointer(AddressType addressType)
+            {
+                Word pointer = this.CurrentFrame.Pop();
+
+                this.CurrentFrame.Push(new Word { Address = new Address(addressType, pointer.Address.Pointer) });
             }
 
             private void LoadConstant(Word constantValue)
             {
                 this.CurrentFrame.Push(constantValue);
+            }
+
+            public void SetHeap(int pointer, long value)
+            {
+                this.heap[pointer] = new Word { Int64 = value };
             }
 
             private MethodStackFrame CurrentFrame

@@ -1,7 +1,6 @@
 ﻿namespace Keeper.Warm
 {
-    internal enum AddressType
-        : byte
+    public enum AddressType
     {
         None,
         Retained,
