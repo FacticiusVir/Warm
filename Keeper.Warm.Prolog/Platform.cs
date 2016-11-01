@@ -26,15 +26,13 @@
                 topOfHeapPointer,
                 Opcode.LoadPointerHeap,
                 Opcode.Duplicate,
-                Opcode.StoreLocal,
-                0,
+                Opcode.StoreLocal0,
                 Opcode.Load,
                 Opcode.Duplicate,
                 Opcode.LoadArgumentAddress0,
                 Opcode.Load,
                 Opcode.Add,
-                Opcode.LoadLocal,
-                0,
+                Opcode.LoadLocal0,
                 Opcode.Store,
                 Opcode.LoadPointerHeap,
                 Opcode.Proceed
@@ -46,17 +44,14 @@
                 Opcode.LoadConstant2,
                 Opcode.Call,
                 0,
-                Opcode.StoreLocal,
-                0,
+                Opcode.StoreLocal0,
                 Opcode.LoadArgumentAddress0,
                 Opcode.Load,
-                Opcode.LoadLocal,
-                0,
+                Opcode.LoadLocal0,
                 Opcode.Store,
                 Opcode.LoadArgumentAddress1,
                 Opcode.Load,
-                Opcode.LoadLocal,
-                0,
+                Opcode.LoadLocal0,
                 Opcode.Increment,
                 Opcode.Store,
                 Opcode.Proceed
@@ -83,15 +78,14 @@
             {
                 Opcode.LoadArgumentAddress0,
                 Opcode.Load,
-                Opcode.StoreLocal,
-                0,
-                Opcode.LoadLocal,
-                0,
+                Opcode.StoreLocal0,
+                Opcode.LoadLocal0,
                 Opcode.Call,
                 0,
 
             }, new[] { GetCellTag, GetCellValue }, 1);
         }
+
         public void DefineMethod(MethodToken token, Opcode[] code, MethodToken[] methodTable = null, int localCount = 0)
         {
             this.machine.DefineMethod(token, code, methodTable, localCount);

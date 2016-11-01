@@ -137,6 +137,11 @@ namespace Keeper.Warm
             yield return (int)Opcode.Proceed;
         }
 
+        public MethodToken[] GetMethodTokens()
+        {
+            return this.tokens.ToArray();
+        }
+
         private void ApplyLabelsForCurrentContext()
         {
             foreach (var label in this.contexts.Peek().Values)

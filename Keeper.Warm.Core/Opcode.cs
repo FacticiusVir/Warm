@@ -66,5 +66,25 @@
         BranchAlways = BranchBase | 2,
 
         LoadLocalAddress = Int64Operand | 12 << 8,
+
+        LoadLocalBase = NoOperand | 13 << 8,
+        LoadLocal0 = LoadLocalBase | 0,
+        LoadLocal1 = LoadLocalBase | 1,
+        LoadLocal2 = LoadLocalBase | 2,
+        LoadLocal3 = LoadLocalBase | 3,
+        LoadLocal4 = LoadLocalBase | 4,
+        LoadLocal5 = LoadLocalBase | 5,
+        LoadLocal6 = LoadLocalBase | 6,
+        LoadLocal7 = LoadLocalBase | 7,
+
+        StoreLocalBase = NoOperand | 14 << 8,
+        StoreLocal0 = StoreLocalBase | 0,
+        StoreLocal1 = StoreLocalBase | 1,
+        StoreLocal2 = StoreLocalBase | 2,
+        StoreLocal3 = StoreLocalBase | 3,
+        StoreLocal4 = StoreLocalBase | 4,
+        StoreLocal5 = StoreLocalBase | 5,
+        StoreLocal6 = StoreLocalBase | 6,
+        StoreLocal7 = StoreLocalBase | 7,
     }
 }

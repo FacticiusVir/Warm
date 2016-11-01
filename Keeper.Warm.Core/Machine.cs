@@ -143,6 +143,16 @@ namespace Keeper.Warm
                     case Opcode.LoadLocal:
                         this.LoadLocal(operand);
                         break;
+                    case Opcode.LoadLocal0:
+                    case Opcode.LoadLocal1:
+                    case Opcode.LoadLocal2:
+                    case Opcode.LoadLocal3:
+                    case Opcode.LoadLocal4:
+                    case Opcode.LoadLocal5:
+                    case Opcode.LoadLocal6:
+                    case Opcode.LoadLocal7:
+                        this.LoadLocal(opcodeSuffix);
+                        break;
                     case Opcode.LoadLocalAddress:
                         this.LoadLocalAddress(operand);
                         break;
@@ -167,6 +177,16 @@ namespace Keeper.Warm
                         break;
                     case Opcode.StoreLocal:
                         this.StoreLocal(operand);
+                        break;
+                    case Opcode.StoreLocal0:
+                    case Opcode.StoreLocal1:
+                    case Opcode.StoreLocal2:
+                    case Opcode.StoreLocal3:
+                    case Opcode.StoreLocal4:
+                    case Opcode.StoreLocal5:
+                    case Opcode.StoreLocal6:
+                    case Opcode.StoreLocal7:
+                        this.StoreLocal(opcodeSuffix);
                         break;
                     default:
                         throw new Exception($"Unknown opcode: {currentOpcode}");
